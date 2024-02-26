@@ -1,0 +1,7 @@
+// semicolon is mandatory
+
+fn main() {
+    print("hello world!");
+}
+
+main();

@@ -1,0 +1,13 @@
+let comp = fn(x) {
+    let tr1 = fn(y) {
+        return (x) + (y);
+    };
+
+    let tr2 = fn(y) {
+        return (x) * (y);
+    };
+
+    return (tr2)((tr1)(1));
+};
+
+return (comp)(6);

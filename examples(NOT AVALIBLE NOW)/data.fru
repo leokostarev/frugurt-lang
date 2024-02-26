@@ -1,0 +1,46 @@
+data User {
+    id;
+    name;
+    age;
+    email;
+
+
+    -----impl-----
+
+    pub fn ToString() {
+        return f"User {name}, {age} years old"; "
+    }
+
+    -----constraints-----
+
+    watch (age) { // fired on any change to age
+        if age > 150 {
+            raise "too old";
+        }
+
+        if typeof(age) != Int {
+            raise "invalid age";
+        }
+    }
+
+    watch (name, email) { // fired on any change to name or email
+        if name == "" {
+            raise "empty name";
+        }
+
+        if email == "" {
+            raise "empty email";
+        }
+    }
+
+    watch (*) { // fired on any change to any field
+        print("something changed");
+    }
+}
+
+let user1 = User {
+    id = 1;
+    name = "John";
+    age = 30;
+    email = "q5B8z@example.com";
+}

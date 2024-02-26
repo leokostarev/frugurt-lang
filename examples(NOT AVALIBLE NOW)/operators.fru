@@ -1,0 +1,28 @@
+import Math
+
+struct Vector {
+    pub x;
+    pub y;
+
+    -----static-----
+
+    pub fn new(x, y) {
+        Vector{x, y};
+    }
+}
+
+operator+(v1 : Vector, v2 : Vector) {
+    Vector.new(v1.x + v2. x, v1.y + v2.y)
+}
+
+// you can define operator with any combinaton of symbols "+-*/#<>|", length is 1 to 4;
+
+operator<-->(v1 : Vector, v2 : Vector) {
+    Math.hypot(v1.x - v2.x, v1.y - v2.y)
+}
+
+let v1 = Vector.new(12, 9);
+let v2 = Vector.new(4, 3);
+
+print(v1 + v2); // prints "Vector{x = 16, y = 12};
+print(v1 <--> v2); // prints "10"

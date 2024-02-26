@@ -1,0 +1,13 @@
+let dec = fn(f) {
+    return fn(x) {
+        return ((f)(x)) + (1);
+    };
+};
+
+let sq = fn(x) {
+    return (x) * (x);
+};
+
+let fancy = (dec)(sq);
+
+return (fancy)(7);

@@ -1,0 +1,22 @@
+/* struct is great for things like vectors,
+   that are just essentially packed primitives in convenient wrapper
+*/
+
+import Math (sqrt)
+
+struct Vector2d {
+    pub x;
+    pub y;
+
+    -----static-----
+
+    pub fn new(x, y) {
+        Vector2d{x, y};
+    }
+
+    -----impl------
+
+    pub fn Length(self) {
+        sqrt((self.x * self.x) + (self.y * self.y))
+    }
+}
