@@ -35,6 +35,7 @@ data FruToken
   | TkIf
   | TkElse
   | TkFn
+  | TkOpDef
   | TkBreak
   | TkContinue
   | TkBraceOpen -- punctuation
@@ -44,6 +45,7 @@ data FruToken
   | TkBracketOpen
   | TkBracketClose
   | TkSemiColon
+  | TkColon
   | TkComma
   | TkIdent String -- identifier
   deriving (Eq, Ord, Show)
@@ -68,6 +70,7 @@ fruTokenize =
           , TkBracketOpen <$ char '['
           , TkBracketClose <$ char ']'
           , TkSemiColon <$ char ';'
+          , TkColon <$ char ':'
           , TkComma <$ char ','
           , try (TkNumber <$> literalNumber) -- literals
           , TkBool <$> literalBool
@@ -98,6 +101,7 @@ fruTokenize =
           "if" -> TkIf
           "else" -> TkElse
           "fn" -> TkFn
+          "operator" -> TkOpDef
           "break" -> TkBreak
           "continue" -> TkContinue
           name -> TkIdent name

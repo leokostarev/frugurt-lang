@@ -29,7 +29,7 @@ impl FruExpression {
         match self {
             FruExpression::Literal(value) => Ok(value.clone()),
 
-            FruExpression::Variable(ident) => Ok(scope.get_variable(ident)?),
+            FruExpression::Variable(ident) => Ok(scope.get_variable(*ident)?),
 
             FruExpression::Call { what, args } => {
                 let callee = what.evaluate(scope.clone())?;
@@ -62,13 +62,13 @@ impl FruExpression {
                     left: type_left,
                     right: type_right,
                 })?;
-                op.call(left_val, right_val)
+                op.operate(left_val, right_val)
             }
 
             FruExpression::FnDef { args, body } => {
                 return Ok(FruValue::Function(AnyFunction::Function(Rc::new(
                     FruFunction {
-                        argument_names: args.clone(),
+                        argument_idents: args.clone(),
                         body: body.clone(),
                         scope: scope.clone(),
                     },

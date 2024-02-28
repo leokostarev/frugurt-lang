@@ -41,6 +41,8 @@ data FruStmt
   | StReturn FruExpr
   | StBreak
   | StContinue
+  | StOpDef String String String String String FruStmt
+  -- operator ident, left arg ident, left arg type ident, right arg ident, right arg type ident, body
   deriving (Show, Eq)
 
 
@@ -78,6 +80,7 @@ toAst = program
         , try returnStmt
         , try breakStmt
         , try continueStmt
+        , try operatorDefStmt
         , try exprStmt
         ]
 
@@ -151,6 +154,26 @@ toAst = program
 
     continueStmt :: ParserStmt
     continueStmt = StContinue <$ single TkContinue <* semicolon
+
+    operatorDefStmt :: ParserStmt
+    operatorDefStmt = do
+      _ <- single TkOpDef
+      ident <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      _ <- single TkParenOpen
+
+      leftIdent <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      _ <- single TkColon
+      leftType <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "type-identifier")
+
+      _ <- single TkComma
+
+      rightIdent <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      _ <- single TkColon
+      rightType <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "type-identifier")
+
+      _ <- single TkParenClose
+
+      StOpDef ident leftIdent leftType rightIdent rightType <$> blockStmt
 
     expr :: ParserExpr
     expr =

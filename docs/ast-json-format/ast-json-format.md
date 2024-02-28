@@ -75,6 +75,18 @@ Continue
 }
 ```
 
+OpDef
+```json
+{
+    "node": "operator",
+    "left_arg": <string>,
+    "left_type": <string>,
+    "right_arg": <string>,
+    "right_type": <string>,
+    "body": <statement>
+}
+```
+
 
 # Expressions
 

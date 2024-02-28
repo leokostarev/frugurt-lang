@@ -21,7 +21,6 @@ fn main() {
 
     let text = std::str::from_utf8(&converter_result.stdout).unwrap();
 
-    dbg!(&text);
     let json_ast_or_err: Result<Value, _> = serde_json::from_str(text);
 
     let json_ast = match json_ast_or_err {
@@ -33,7 +32,6 @@ fn main() {
     };
 
     let ast = interpreter::ast_json_parser::parse(json_ast);
-    
 
     interpreter::runner::run_program(ast);
 }

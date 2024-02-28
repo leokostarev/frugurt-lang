@@ -1,4 +1,6 @@
-use super::{FruError, FruExpression, FruValue, Identifier, Scope};
+use super::{
+    AnyOperator, FruError, FruExpression, FruValue, Identifier, OperatorIdentifier, Scope,
+};
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -29,6 +31,14 @@ pub enum FruStatement {
     },
     Break,
     Continue,
+    OperatorDefinition {
+        ident: Identifier,
+        left_arg: Identifier,
+        left_type: Identifier,
+        right_arg: Identifier,
+        right_type: Identifier,
+        body: Rc<FruStatement>,
+    },
 }
 
 #[derive(Debug)]
@@ -126,6 +136,27 @@ impl FruStatement {
 
             FruStatement::Break => Ok(StatementSignal::Break),
             FruStatement::Continue => Ok(StatementSignal::Continue),
+
+            FruStatement::OperatorDefinition {
+                ident,
+                left_arg,
+                left_type,
+                right_arg,
+                right_type,
+                body,
+            } => {
+                scope.set_operator(
+                    OperatorIdentifier::new(*ident, *left_type, *right_type),
+                    AnyOperator::Operator {
+                        left_ident: *left_arg,
+                        right_ident: *right_arg,
+                        body: body.clone(),
+                        scope: scope.clone(),
+                    },
+                );
+
+                Ok(StatementSignal::Nah)
+            }
         }
     }
 }

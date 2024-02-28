@@ -34,12 +34,17 @@ pub enum AnyFunction {
 
 #[derive(Clone)]
 pub enum AnyOperator {
-    Operator(Rc<FruFunction>),
+    Operator {
+        left_ident: Identifier,
+        right_ident: Identifier,
+        body: Rc<FruStatement>,
+        scope: Rc<Scope>,
+    },
     BuiltinOperator(Rc<TOpBuiltin>),
 }
 
 pub struct FruFunction {
-    pub argument_names: Vec<Identifier>,
+    pub argument_idents: Vec<Identifier>,
     pub body: Rc<FruStatement>,
     pub scope: Rc<Scope>,
 }
@@ -58,17 +63,17 @@ impl FruValue {
 
 impl FruFunction {
     pub fn call(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
-        if self.argument_names.len() != args.len() {
+        if self.argument_idents.len() != args.len() {
             return FruError::new_err(format!(
                 "expected {} arguments, got {}",
-                self.argument_names.len(),
+                self.argument_idents.len(),
                 args.len()
             ));
         }
 
         let new_scope = Scope::new_with_parent(self.scope.clone());
 
-        for (ident, value) in self.argument_names.iter().zip(args.iter()) {
+        for (ident, value) in self.argument_idents.iter().zip(args.iter()) {
             new_scope
                 .let_variable(*ident, value.clone())
                 .expect("should NEVER happen XD :)");
@@ -93,10 +98,27 @@ impl AnyFunction {
 }
 
 impl AnyOperator {
-    pub fn call(&self, left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+    pub fn operate(&self, left_val: FruValue, right_val: FruValue) -> Result<FruValue, FruError> {
         match self {
-            AnyOperator::Operator(op) => op.call(vec![left, right]),
-            AnyOperator::BuiltinOperator(op) => op(left, right),
+            AnyOperator::Operator {
+                left_ident,
+                right_ident,
+                body,
+                scope,
+            } => {
+                let mut new_scope = Scope::new_with_parent(scope.clone());
+                new_scope.let_variable(*left_ident, left_val)?;
+                new_scope.let_variable(*right_ident, right_val)?;
+
+                let res = body.execute(new_scope)?;
+
+                match res {
+                    StatementSignal::Nah => Ok(FruValue::None),
+                    StatementSignal::Return(v) => Ok(v),
+                    other => FruError::new_err(format!("unexpected signal {:?}", other)),
+                }
+            }
+            AnyOperator::BuiltinOperator(op) => op(left_val, right_val),
         }
     }
 }

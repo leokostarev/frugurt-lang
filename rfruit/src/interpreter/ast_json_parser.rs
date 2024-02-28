@@ -104,6 +104,24 @@ fn convert(ast: &Value) -> Anything {
 
         "continue" => Stmt(FruStatement::Continue),
 
+        "operator" => {
+            let ident = ast["ident"].as_str().unwrap();
+            let left_arg = ast["left_arg"].as_str().unwrap();
+            let left_type = ast["left_type"].as_str().unwrap();
+            let right_arg = ast["right_arg"].as_str().unwrap();
+            let right_type = ast["right_type"].as_str().unwrap();
+            let body = convert(&ast["body"]).as_stmt();
+
+            Stmt(FruStatement::OperatorDefinition {
+                ident: Identifier::new(ident),
+                left_arg: Identifier::new(left_arg),
+                left_type: Identifier::new(left_type),
+                right_arg: Identifier::new(right_arg),
+                right_type: Identifier::new(right_type),
+                body: Rc::new(body),
+            })
+        }
+
         // expressions
         "literal" => match &ast["value"] {
             Value::Number(n) => {
@@ -160,7 +178,7 @@ fn convert(ast: &Value) -> Anything {
             })
         }
 
-        "fn_def" => {
+        "function" => {
             let args = ast["args"]
                 .as_array()
                 .unwrap()

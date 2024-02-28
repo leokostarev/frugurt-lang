@@ -51,7 +51,7 @@ toJsonExpr expr = case expr of
       ]
   ExFnDef args body ->
     Object
-      [ ("node", Str "fn_def")
+      [ ("node", Str "function")
       , ("args", Array $ map Str args)
       , ("body", toJsonStmt body)
       ]
@@ -101,6 +101,16 @@ toJsonStmt stmt = case stmt of
       ]
   StBreak -> Object [("node", Str "break")]
   StContinue -> Object [("node", Str "continue")]
+  StOpDef op left_arg left_type right_arg right_type body ->
+    Object
+      [ ("node", Str "operator")
+      , ("ident", Str op)
+      , ("left_arg", Str left_arg)
+      , ("left_type", Str left_type)
+      , ("right_arg", Str right_arg)
+      , ("right_type", Str right_type)
+      , ("body", toJsonStmt body)
+      ]
 
 
 toString :: JSON -> String
