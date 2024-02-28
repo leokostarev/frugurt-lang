@@ -10,4 +10,4 @@ let sq = fn(x) {
 
 let fancy = (dec)(sq);
 
-return (fancy)(7);
+(print)((fancy)(7));

@@ -10,4 +10,4 @@ let comp = fn(x) {
     return (tr2)((tr1)(1));
 };
 
-return (comp)(6);
+(print)((comp)(6));

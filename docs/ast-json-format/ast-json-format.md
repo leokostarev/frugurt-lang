@@ -82,7 +82,7 @@ Literal
 ```json
 {
     "node": "literal",
-    "value": <float> | <bool>
+    "value": <float> | <bool> | <string>
 }
 ```
 

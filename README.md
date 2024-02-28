@@ -10,7 +10,7 @@ let sq = fn(i) {
     return (i) * (i);
 };
 
-return (sq)(7); // returns 49
+(print)((sq)(7)); // prints 49
 
 ```
 Note: the heavy use of parentheses is not because thay are special syntax, but because I am bad at making parsers. :sob:
@@ -88,6 +88,7 @@ Note: `-----constraints-----` and `-----impl-----` are keywords, you can find fu
 
 
 # THE FEATURES THAT HAVE BEEN DONE:
-- keywords: fn, if, while, return, break, continue, return
+- keywords: fn, if, while, return, break, continue
 - types: int, bool
 - concepts: functions, control flow
+- fuctions: print

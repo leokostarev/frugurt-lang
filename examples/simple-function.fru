@@ -2,4 +2,4 @@ let sq = fn(i) {
     return (i) * (i);
 };
 
-return (sq)(7);
+(print)((sq)(7));
