@@ -88,7 +88,7 @@ Note: `-----constraints-----` and `-----impl-----` are keywords, you can find fu
 
 
 # THE FEATURES THAT HAVE BEEN DONE:
-- keywords: fn, if, while, return, break, continue
-- types: int, bool
-- concepts: functions, control flow
+- keywords: fn, if, while, return, break, continue, operator
+- types: int, bool, string
+- concepts: functions, control flow, operators
 - fuctions: print

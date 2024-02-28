@@ -36,9 +36,10 @@ main = do
 
   raw <- readFile name
 
+  -- tokens --
   let toksOrErr = parse fruTokenize name raw
   when (isLeft toksOrErr) $ do
-    putStrLn "---------- Error while tokenizing ----------"
+    putStrLn "---------- ERROR WHILE TOKENIZING ----------"
     print toksOrErr
     exitFailure
 
@@ -48,8 +49,10 @@ main = do
     putStrLn "---------- TOKENS ----------"
     putStrLn $ intercalate "\n" $ map (("| " ++) . show) toks
 
+  -- ast --
   let astOrErr = parse toAst name toks
   when (isLeft astOrErr) $ do
+    putStrLn "---------- ERROR WHILE TREEANIZING ----------"
     print astOrErr
     exitFailure
 
@@ -58,12 +61,7 @@ main = do
     putStrLn "---------- AST ------------"
     print ast
 
-  let json = toJsonStmt ast
-  when detailedFlag $ do
-    putStrLn "---------- JSON -----------"
-    print json
-
-  let str = toString json
+  let str = toString $ toJsonStmt ast
   when detailedFlag $ do
     putStrLn "---------- STRING ----------"
 
