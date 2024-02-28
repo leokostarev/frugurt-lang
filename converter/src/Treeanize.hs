@@ -2,8 +2,9 @@
 
 module Treeanize (toAst, FruExpr (..), FruStmt (..)) where
 
+import qualified Data.List.NonEmpty as NonEmpty
 import Data.Scientific (Scientific)
-import qualified Data.Set as Set
+import Data.Set (Set, singleton)
 import Data.Void (Void)
 import Text.Megaparsec
   ( MonadParsec (eof, token, try)
@@ -15,12 +16,14 @@ import Text.Megaparsec
   , single
   , (<|>)
   )
+import Text.Megaparsec.Error (ErrorItem (Label))
 import Tokenize (FruToken (..))
 
 
 data FruExpr
   = ExLiteralNumber Scientific
   | ExLiteralBool Bool
+  | ExLiteralString String
   | ExVariable String
   | ExCall FruExpr [FruExpr]
   | ExBinary String FruExpr FruExpr
@@ -40,6 +43,14 @@ data FruStmt
   | StContinue
   deriving (Show, Eq)
 
+
+-- helpers
+
+makeErrSet :: String -> Set (ErrorItem FruToken)
+makeErrSet = singleton . Label . NonEmpty.fromList
+
+
+-- parser
 
 type ParserStmt = Parsec Void [FruToken] FruStmt
 
@@ -93,7 +104,7 @@ toAst = program
     letStmt :: ParserStmt
     letStmt = do
       _ <- single TkLet
-      name <- token (\case TkIdent x -> Just x; _ -> Nothing) Set.empty
+      name <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
       _ <- single (TkOp "=")
       value <- expr
       _ <- semicolon
@@ -101,7 +112,7 @@ toAst = program
 
     setStmt :: ParserStmt
     setStmt = do
-      name <- token (\case TkIdent x -> Just x; _ -> Nothing) Set.empty
+      name <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
       _ <- single (TkOp "=")
       value <- expr
       _ <- semicolon
@@ -146,6 +157,7 @@ toAst = program
       choice
         [ literalNumber
         , literalBool
+        , literalString
         , variable
         , try binary
         , try call
@@ -155,17 +167,22 @@ toAst = program
       where
         literalNumber :: ParserExpr
         literalNumber = do
-          value <- token (\case TkNumber x -> Just x; _ -> Nothing) Set.empty
+          value <- token (\case TkNumber x -> Just x; _ -> Nothing) (makeErrSet "number")
           return $ ExLiteralNumber value
 
         literalBool :: ParserExpr
         literalBool = do
-          value <- token (\case TkBool x -> Just x; _ -> Nothing) Set.empty
+          value <- token (\case TkBool x -> Just x; _ -> Nothing) (makeErrSet "bool")
           return $ ExLiteralBool value
+
+        literalString :: ParserExpr
+        literalString = do
+          value <- token (\case TkString x -> Just x; _ -> Nothing) (makeErrSet "string")
+          return $ ExLiteralString value
 
         variable :: ParserExpr
         variable = do
-          ident <- token (\case TkIdent x -> Just x; _ -> Nothing) Set.empty
+          ident <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
           return $ ExVariable ident
 
         paren :: ParserExpr
@@ -188,7 +205,7 @@ toAst = program
         binary :: ParserExpr
         binary = do
           left <- paren
-          op <- token (\case TkOp x -> Just x; _ -> Nothing) Set.empty
+          op <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "operator")
           ExBinary op left <$> paren
 
         fnDef :: ParserExpr
@@ -199,7 +216,7 @@ toAst = program
               (single TkParenOpen)
               (single TkParenClose)
               ( sepBy
-                  (token (\case TkIdent x -> Just x; _ -> Nothing) Set.empty)
+                  (token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier"))
                   (single TkComma)
               )
 

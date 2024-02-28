@@ -4,20 +4,20 @@ module Tokenize
   ) where
 
 import Data.Char (isAlpha, isAlphaNum)
+import Data.Scientific (Scientific)
 import Data.Void (Void)
 import Text.Megaparsec
-  ( MonadParsec (takeWhile1P, takeWhileP)
+  ( MonadParsec (..)
   , Parsec
   , choice
   , many
+  , manyTill
   , satisfy
   , (<?>)
   , (<|>)
   )
 import Text.Megaparsec.Char (char, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
-import Text.Megaparsec.Char.Lexer (scientific)
-import Data.Scientific (Scientific)
 
 
 opChars :: String
@@ -27,6 +27,7 @@ opChars = "=+-*/<>&|"
 data FruToken
   = TkNumber Scientific -- primitives
   | TkBool Bool
+  | TkString String
   | TkOp String -- operator
   | TkLet -- keywords
   | TkWhile
@@ -55,9 +56,6 @@ sc :: Parser ()
 sc = L.space space1 (L.skipLineComment "//") (L.skipBlockComment "/*" "*/")
 
 
--- stringLiteral :: Parser String
--- stringLiteral = char '\"' *> manyTill L.charLiteral (char '\"')
-
 fruTokenize :: Parser [FruToken]
 fruTokenize =
   sc
@@ -71,19 +69,21 @@ fruTokenize =
           , TkBracketClose <$ char ']'
           , TkSemiColon <$ char ';'
           , TkComma <$ char ','
-          , TkNumber <$> literalNumber -- literals
+          , try (TkNumber <$> literalNumber) -- literals
           , TkBool <$> literalBool
+          , TkString <$> literalString
           , TkOp <$> operator -- operator
           , keywordOrIdent -- keyword or identifier
           ]
           <* sc
       )
   where
-    -- literalInt = L.signed sc L.decimal -- <* notFollowedBy (sc <* char '.' )
-    -- literalFloat = L.signed sc L.float
-    literalNumber = L.signed sc scientific
+    literalNumber = L.signed sc L.scientific
 
     literalBool = (True <$ string "true") <|> (False <$ string "false")
+
+    literalString :: Parser String
+    literalString = char '\"' *> manyTill L.charLiteral (char '\"')
 
     operator = takeWhile1P (Just "operator") (`elem` opChars)
 

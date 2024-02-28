@@ -1,8 +1,8 @@
 module Jsonize (toJsonExpr, toJsonStmt, toString) where
 
 import Data.List (intercalate)
-import Treeanize (FruExpr (..), FruStmt (..))
 import Data.Scientific (toRealFloat)
+import Treeanize (FruExpr (..), FruStmt (..))
 
 
 data JSON
@@ -25,6 +25,11 @@ toJsonExpr expr = case expr of
     Object
       [ ("node", Str "literal")
       , ("value", Bool b)
+      ]
+  ExLiteralString s ->
+    Object
+      [ ("node", Str "literal")
+      , ("value", Str s)
       ]
   ExVariable s ->
     Object

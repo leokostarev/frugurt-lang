@@ -12,7 +12,7 @@ pub enum FruValue {
     None,
     Number(f64),
     Bool(bool),
-    // String(String),
+    String(String),
 
     // ---function---
     Function(AnyFunction),
@@ -50,6 +50,7 @@ impl FruValue {
             FruValue::None => Identifier::for_none(),
             FruValue::Number(_) => Identifier::for_number(),
             FruValue::Bool(_) => Identifier::for_bool(),
+            FruValue::String(_) => Identifier::for_string(),
             FruValue::Function(_) => Identifier::for_function(),
         }
     }
@@ -106,6 +107,7 @@ impl Debug for FruValue {
             FruValue::None => write!(f, "None"),
             FruValue::Number(v) => write!(f, "{}", v),
             FruValue::Bool(v) => write!(f, "{}", v),
+            FruValue::String(v) => write!(f, "{}", v),
             FruValue::Function(_) => write!(f, "Function"),
         }
     }

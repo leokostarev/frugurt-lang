@@ -122,6 +122,8 @@ fn convert(ast: &Value) -> Anything {
 
             Value::Bool(v) => Expr(FruExpression::Literal(FruValue::Bool(*v))),
 
+            Value::String(s) => Expr(FruExpression::Literal(FruValue::String(s.clone()))),
+
             _ => panic!("json is invalid"),
         },
 

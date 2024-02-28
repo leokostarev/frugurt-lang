@@ -1,4 +1,4 @@
-use serde_json::{Value};
+use serde_json::Value;
 use std::env;
 use std::process::Command;
 
@@ -21,17 +21,19 @@ fn main() {
 
     let text = std::str::from_utf8(&converter_result.stdout).unwrap();
 
-    let ast_or_err: Result<Value, _> = serde_json::from_str(text);
+    dbg!(&text);
+    let json_ast_or_err: Result<Value, _> = serde_json::from_str(text);
 
-    let json_ast = match ast_or_err {
+    let json_ast = match json_ast_or_err {
         Ok(x) => x,
-        Err(x)=>{
+        Err(x) => {
             println!("{}", x);
             std::process::exit(1);
         }
     };
 
     let ast = interpreter::ast_json_parser::parse(json_ast);
+    
 
     interpreter::runner::run_program(ast);
 }

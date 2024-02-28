@@ -30,6 +30,10 @@ impl Id {
         return Self::new("Bool");
     }
 
+    pub fn for_string() -> Self {
+        return Self::new("String");
+    }
+
     pub fn for_function() -> Self {
         return Self::new("Function");
     }
@@ -107,15 +111,24 @@ pub fn builtin_operators() -> HashMap<OpId, AnyOperator> {
         }),
     );
 
-    res.insert(
-        OpId::new(Id::for_and(), Id::for_bool(), Id::for_bool()),
-        AnyOperator::BuiltinOperator(Rc::new(bool_and_bool)),
-    );
-
-    res.insert(
-        OpId::new(Id::for_or(), Id::for_bool(), Id::for_bool()),
-        AnyOperator::BuiltinOperator(Rc::new(bool_or_bool)),
-    );
+    res.extend([
+        (
+            OpId::new(Id::for_and(), Id::for_bool(), Id::for_bool()),
+            AnyOperator::BuiltinOperator(Rc::new(bool_and_bool)),
+        ),
+        (
+            OpId::new(Id::for_or(), Id::for_bool(), Id::for_bool()),
+            AnyOperator::BuiltinOperator(Rc::new(bool_or_bool)),
+        ),
+        (
+            OpId::new(Id::for_plus(), Id::for_string(), Id::for_string()),
+            AnyOperator::BuiltinOperator(Rc::new(string_plus_string)),
+        ),
+        (
+            OpId::new(Id::for_multiply(), Id::for_string(), Id::for_number()),
+            AnyOperator::BuiltinOperator(Rc::new(string_mul_num)),
+        ),
+    ]);
 
     res
 }
@@ -144,3 +157,25 @@ builtin_operator!(num_not_eq_num, Number, Number, Bool, !=);
 // bool
 builtin_operator!(bool_or_bool, Bool, Bool, Bool, ||);
 builtin_operator!(bool_and_bool, Bool, Bool, Bool, &&);
+
+//string
+
+fn string_plus_string(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+    if let (FruValue::String(l), FruValue::String(r)) = (left, right) {
+        return Ok(FruValue::String(l + &*r));
+    }
+
+    unreachable!();
+}
+
+fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+    if let (FruValue::String(l), FruValue::Number(r)) = (left, right) {
+        if r.fract() != 0.0 || r < 0.0 {
+            return FruError::new_errs("String * number must be a positive integer");
+        }
+
+        return Ok(FruValue::String(l.repeat(r as usize)));
+    }
+
+    unreachable!();
+}
