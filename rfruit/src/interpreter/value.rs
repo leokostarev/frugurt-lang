@@ -10,8 +10,7 @@ pub type TOpBuiltin = dyn Fn(FruValue, FruValue) -> Result<FruValue, FruError>;
 pub enum FruValue {
     // ---primitives---
     None,
-    Int(i64),
-    Float(f64),
+    Number(f64),
     Bool(bool),
     // String(String),
 
@@ -49,8 +48,7 @@ impl FruValue {
     pub fn get_type_identifier(&self) -> Identifier {
         match self {
             FruValue::None => Identifier::for_none(),
-            FruValue::Int(_) => Identifier::for_int(),
-            FruValue::Float(_) => Identifier::for_float(),
+            FruValue::Number(_) => Identifier::for_number(),
             FruValue::Bool(_) => Identifier::for_bool(),
             FruValue::Function(_) => Identifier::for_function(),
         }
@@ -69,9 +67,9 @@ impl FruFunction {
 
         let new_scope = Scope::new_with_parent(self.scope.clone());
 
-        for (name, value) in self.argument_names.iter().zip(args.iter()) {
+        for (ident, value) in self.argument_names.iter().zip(args.iter()) {
             new_scope
-                .let_variable(name.clone(), value.clone())
+                .let_variable(*ident, value.clone())
                 .expect("should NEVER happen XD :)");
         }
 
@@ -106,8 +104,7 @@ impl Debug for FruValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FruValue::None => write!(f, "None"),
-            FruValue::Int(v) => write!(f, "{}", v),
-            FruValue::Float(v) => write!(f, "{}", v),
+            FruValue::Number(v) => write!(f, "{}", v),
             FruValue::Bool(v) => write!(f, "{}", v),
             FruValue::Function(_) => write!(f, "Function"),
         }

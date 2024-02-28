@@ -45,6 +45,7 @@ extra-deps:
 - containers-0.6.5.1
 - binary-0.8.9.1@sha256:81f468c1c75fd6535152ab69b2d32ac6cfcc03e345267b069abe4da56ec95801,6523
 - text-2.1@sha256:471b9a22f88b1d51bc343e7d1db7bf88b84e1582eb6d5fbe643fe7afc683c256,9422
+- scientific-0.3.7.0
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

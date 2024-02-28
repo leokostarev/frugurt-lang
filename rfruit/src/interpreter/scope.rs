@@ -1,5 +1,8 @@
-use super::{AnyOperator, FruError, FruValue, Identifier, OperatorIdentifier};
-use crate::interpreter::builtins::builtin_operators;
+use super::{
+    builtin_functions::builtin_functions, builtin_operators::builtin_operators, AnyOperator,
+    FruError, FruValue, Identifier, OperatorIdentifier,
+};
+
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -13,7 +16,7 @@ pub struct Scope {
 impl Scope {
     pub fn new_global() -> Rc<Scope> {
         Rc::new(Scope {
-            variables: RefCell::new(HashMap::new()),
+            variables: RefCell::new(builtin_functions()),
             operators: builtin_operators(),
             parent: None,
         })
@@ -27,7 +30,7 @@ impl Scope {
         })
     }
 
-    pub fn get_variable(&self, ident: Identifier) -> Result<FruValue, FruError> {
+    pub fn get_variable(&self, ident: &Identifier) -> Result<FruValue, FruError> {
         match (self.variables.borrow().get(&ident), &self.parent) {
             (Some(var), _) => Ok(var.clone()),
             (_, Some(parent)) => parent.get_variable(ident),

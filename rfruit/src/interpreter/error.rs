@@ -6,12 +6,12 @@ pub struct FruError {
 }
 
 impl FruError {
-    pub fn new_err<'a>(message: String) -> Result<FruValue, FruError> {
+    pub fn new_err(message: String) -> Result<FruValue, FruError> {
         // never Ok!
         Err(FruError { message })
     }
 
-    pub fn new_errs<'a>(message: &str) -> Result<FruValue, FruError> {
+    pub fn new_errs(message: &str) -> Result<FruValue, FruError> {
         Err(FruError {
             message: message.to_string(),
         })
@@ -19,5 +19,11 @@ impl FruError {
 
     pub fn new(message: String) -> FruError {
         FruError { message }
+    }
+    
+    pub fn news(message: &str) -> FruError {
+        FruError {
+            message: message.to_string(),
+        }
     }
 }

@@ -32,6 +32,13 @@ packages:
       size: 7878
   original:
     hackage: text-2.1@sha256:471b9a22f88b1d51bc343e7d1db7bf88b84e1582eb6d5fbe643fe7afc683c256,9422
+- completed:
+    hackage: scientific-0.3.7.0@sha256:909755ab19b453169ff85281323da1488407776b2360bd9f7afdd219fd306ef2,4869
+    pantry-tree:
+      sha256: 00e74ee83063c8c5cf5c726d9ed079a7f67051f3ddd9e2ecbbe3c6ea06271061
+      size: 657
+  original:
+    hackage: scientific-0.3.7.0
 snapshots:
 - completed:
     sha256: 2fdd7d3e54540062ef75ca0a73ca3a804c527dbf8a4cadafabf340e66ac4af40

@@ -2,6 +2,7 @@
 
 module Treeanize (toAst, FruExpr (..), FruStmt (..)) where
 
+import Data.Scientific (Scientific)
 import qualified Data.Set as Set
 import Data.Void (Void)
 import Text.Megaparsec
@@ -18,7 +19,7 @@ import Tokenize (FruToken (..))
 
 
 data FruExpr
-  = ExLiteralInt Int
+  = ExLiteralNumber Scientific
   | ExLiteralBool Bool
   | ExVariable String
   | ExCall FruExpr [FruExpr]
@@ -71,7 +72,11 @@ toAst = program
 
     blockStmt :: ParserStmt
     blockStmt = do
-      stmts <- between (single TkBraceOpen) (single TkBraceClose) (many stmt)
+      stmts <-
+        between
+          (single TkBraceOpen)
+          (single TkBraceClose)
+          (many stmt)
       return $
         if length stmts == 1
           then head stmts
@@ -79,11 +84,13 @@ toAst = program
 
     semicolon = single TkSemiColon
 
+    exprStmt :: ParserStmt
     exprStmt = do
       ex <- expr
       _ <- semicolon
       return $ StExpr ex
 
+    letStmt :: ParserStmt
     letStmt = do
       _ <- single TkLet
       name <- token (\case TkIdent x -> Just x; _ -> Nothing) Set.empty
@@ -92,6 +99,7 @@ toAst = program
       _ <- semicolon
       return $ StLet name value
 
+    setStmt :: ParserStmt
     setStmt = do
       name <- token (\case TkIdent x -> Just x; _ -> Nothing) Set.empty
       _ <- single (TkOp "=")
@@ -99,12 +107,14 @@ toAst = program
       _ <- semicolon
       return $ StSet name value
 
+    ifStmt :: ParserStmt
     ifStmt = do
       _ <- single TkIf
       cond <- expr
       thenBody <- blockStmt
       return $ StIf cond thenBody (StComposite [])
 
+    ifElseStmt :: ParserStmt
     ifElseStmt = do
       _ <- single TkIf
       cond <- expr
@@ -112,25 +122,29 @@ toAst = program
       _ <- single TkElse
       StIf cond thenBody <$> (blockStmt <|> ifElseStmt <|> ifStmt)
 
+    whileStmt :: ParserStmt
     whileStmt = do
       _ <- single TkWhile
       cond <- expr
       StWhile cond <$> blockStmt
 
+    returnStmt :: ParserStmt
     returnStmt = do
       _ <- single TkReturn
       value <- expr
       _ <- semicolon
       return $ StReturn value
 
+    breakStmt :: ParserStmt
     breakStmt = StBreak <$ single TkBreak <* semicolon
 
+    continueStmt :: ParserStmt
     continueStmt = StContinue <$ single TkContinue <* semicolon
 
     expr :: ParserExpr
     expr =
       choice
-        [ literalInt
+        [ literalNumber
         , literalBool
         , variable
         , try binary
@@ -139,10 +153,10 @@ toAst = program
         , try fnDef
         ]
       where
-        literalInt :: ParserExpr
-        literalInt = do
-          value <- token (\case TkInt x -> Just x; _ -> Nothing) Set.empty
-          return $ ExLiteralInt value
+        literalNumber :: ParserExpr
+        literalNumber = do
+          value <- token (\case TkNumber x -> Just x; _ -> Nothing) Set.empty
+          return $ ExLiteralNumber value
 
         literalBool :: ParserExpr
         literalBool = do

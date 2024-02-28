@@ -26,6 +26,7 @@ executable converter
     , containers
     , binary
     , text
+    , scientific
   ghc-options:         -Wall
                        -Wcompat
                        -Widentities

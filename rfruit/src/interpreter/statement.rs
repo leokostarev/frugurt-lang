@@ -27,6 +27,8 @@ pub enum FruStatement {
     Return {
         value: Box<FruExpression>,
     },
+    Break,
+    Continue,
 }
 
 #[derive(Debug)]
@@ -61,20 +63,20 @@ impl FruStatement {
 
             FruStatement::Let { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
-                scope.let_variable(ident.clone(), v)?;
+                scope.let_variable(*ident, v)?;
                 Ok(StatementSignal::Nah)
             }
 
             FruStatement::Set { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
-                scope.set_variable(ident.clone(), v)?;
+                scope.set_variable(*ident, v)?;
                 Ok(StatementSignal::Nah)
             }
 
             FruStatement::If {
                 cond: condition,
                 then,
-                else_
+                else_,
             } => {
                 let result = condition.evaluate(scope.clone())?;
                 if let FruValue::Bool(b) = result {
@@ -112,7 +114,7 @@ impl FruStatement {
                         return Ok(StatementSignal::Nah);
                     };
                 } else {
-                    return Err(FruError::new("condition is not a boolean".to_string()));
+                    return Err(FruError::news("condition is not a boolean"));
                 }
             },
 
@@ -121,6 +123,9 @@ impl FruStatement {
 
                 return Ok(StatementSignal::Return(v));
             }
+
+            FruStatement::Break => Ok(StatementSignal::Break),
+            FruStatement::Continue => Ok(StatementSignal::Continue),
         }
     }
 }

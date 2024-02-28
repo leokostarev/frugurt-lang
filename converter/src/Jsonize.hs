@@ -2,10 +2,11 @@ module Jsonize (toJsonExpr, toJsonStmt, toString) where
 
 import Data.List (intercalate)
 import Treeanize (FruExpr (..), FruStmt (..))
+import Data.Scientific (toRealFloat)
 
 
 data JSON
-  = Int Int
+  = Number Double
   | Bool Bool
   | Str String
   | Array [JSON]
@@ -15,10 +16,10 @@ data JSON
 
 toJsonExpr :: FruExpr -> JSON
 toJsonExpr expr = case expr of
-  ExLiteralInt i ->
+  ExLiteralNumber i ->
     Object
       [ ("node", Str "literal")
-      , ("value", Int i)
+      , ("value", Number $ toRealFloat i)
       ]
   ExLiteralBool b ->
     Object
@@ -98,7 +99,7 @@ toJsonStmt stmt = case stmt of
 
 
 toString :: JSON -> String
-toString (Int i) = show i
+toString (Number i) = show i
 toString (Bool b)
   | b = "true"
   | otherwise = "false"

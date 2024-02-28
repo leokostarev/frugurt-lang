@@ -16,6 +16,8 @@ import Text.Megaparsec
   )
 import Text.Megaparsec.Char (char, space1, string)
 import qualified Text.Megaparsec.Char.Lexer as L
+import Text.Megaparsec.Char.Lexer (scientific)
+import Data.Scientific (Scientific)
 
 
 opChars :: String
@@ -23,7 +25,7 @@ opChars = "=+-*/<>&|"
 
 
 data FruToken
-  = TkInt Int -- primitives
+  = TkNumber Scientific -- primitives
   | TkBool Bool
   | TkOp String -- operator
   | TkLet -- keywords
@@ -61,7 +63,7 @@ fruTokenize =
   sc
     *> many
       ( choice
-          [ TkBraceOpen <$ char '{'
+          [ TkBraceOpen <$ char '{' -- punctuation
           , TkBraceClose <$ char '}'
           , TkParenOpen <$ char '('
           , TkParenClose <$ char ')'
@@ -69,18 +71,17 @@ fruTokenize =
           , TkBracketClose <$ char ']'
           , TkSemiColon <$ char ';'
           , TkComma <$ char ','
-          , -- literals
-            TkInt <$> literalInt
+          , TkNumber <$> literalNumber -- literals
           , TkBool <$> literalBool
-          , -- operator
-            TkOp <$> operator
-          , -- keyword or identifier
-            keywordOrIdent
+          , TkOp <$> operator -- operator
+          , keywordOrIdent -- keyword or identifier
           ]
           <* sc
       )
   where
-    literalInt = L.decimal
+    -- literalInt = L.signed sc L.decimal -- <* notFollowedBy (sc <* char '.' )
+    -- literalFloat = L.signed sc L.float
+    literalNumber = L.signed sc scientific
 
     literalBool = (True <$ string "true") <|> (False <$ string "false")
 

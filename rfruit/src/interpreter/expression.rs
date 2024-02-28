@@ -2,7 +2,6 @@ use super::{
     AnyFunction, FruError, FruFunction, FruStatement, FruValue, Identifier, OperatorIdentifier,
     Scope,
 };
-use crate::fru_progress;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -30,25 +29,20 @@ impl FruExpression {
         match self {
             FruExpression::Literal(value) => Ok(value.clone()),
 
-            FruExpression::Variable(ident) => Ok(scope.get_variable(ident.clone())?),
+            FruExpression::Variable(ident) => Ok(scope.get_variable(ident)?),
 
             FruExpression::Call { what, args } => {
-                let var = what.evaluate(scope.clone())?;
-
-                match var {
-                    //
-                    FruValue::Function(func) => {
-                        let args_evaluated = args
-                            .iter()
+                let callee = what.evaluate(scope.clone())?;
+                match callee {
+                    FruValue::Function(func) => func.call(
+                        args.iter()
                             .map(|arg| arg.evaluate(scope.clone()))
-                            .collect::<Result<Vec<FruValue>, FruError>>()?;
-                        fru_progress!("Calling fru-function with args {:?}", args_evaluated);
-                        func.call(args_evaluated)
-                    }
+                            .collect::<Result<Vec<FruValue>, FruError>>()?,
+                    ),
 
                     _ => FruError::new_err(format!(
                         "{} is not a function",
-                        var.get_type_identifier()
+                        what.evaluate(scope.clone())?.get_type_identifier()
                     )),
                 }
             }
@@ -64,7 +58,7 @@ impl FruExpression {
                 let type_right = right_val.get_type_identifier();
 
                 let op = scope.get_operator(OperatorIdentifier {
-                    op: operator.clone(),
+                    op: *operator,
                     left: type_left,
                     right: type_right,
                 })?;

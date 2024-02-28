@@ -38,6 +38,7 @@ main = do
 
   let toksOrErr = parse fruTokenize name raw
   when (isLeft toksOrErr) $ do
+    putStrLn "---------- Error while tokenizing ----------"
     print toksOrErr
     exitFailure
 
