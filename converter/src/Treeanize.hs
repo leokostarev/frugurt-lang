@@ -26,6 +26,7 @@ data FruExpr
   | ExLiteralString String
   | ExVariable String
   | ExCall FruExpr [FruExpr]
+  | ExCurryCall FruExpr [FruExpr]
   | ExBinary String FruExpr FruExpr
   | ExFnDef [String] FruStmt
   deriving (Show, Eq)
@@ -203,6 +204,7 @@ toAst = program
         , variable
         , try binary
         , try call
+        , try curryCall
         , try paren
         , try fnDef
         ]
@@ -243,6 +245,17 @@ toAst = program
               (single TkParenClose)
               (sepBy expr (single TkComma))
           return $ ExCall what args
+
+        curryCall :: ParserExpr
+        curryCall = do
+          what <- paren
+          args <-
+            between
+              (single TkDollarParenOpen)
+              (single TkParenClose)
+              (sepBy expr (single TkComma))
+
+          return $ ExCurryCall what args
 
         binary :: ParserExpr
         binary = do

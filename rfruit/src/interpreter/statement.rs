@@ -19,8 +19,8 @@ pub enum FruStatement {
     },
     If {
         cond: Box<FruExpression>,
-        then: Box<FruStatement>,
-        else_: Box<FruStatement>,
+        then_body: Box<FruStatement>,
+        else_body: Box<FruStatement>,
     },
     While {
         cond: Box<FruExpression>,
@@ -89,8 +89,8 @@ impl FruStatement {
 
             FruStatement::If {
                 cond: condition,
-                then,
-                else_,
+                then_body: then,
+                else_body: else_,
             } => {
                 let result = condition.evaluate(scope.clone())?;
                 if let FruValue::Bool(b) = result {
@@ -131,7 +131,7 @@ impl FruStatement {
                         } else {
                             return Ok(StatementSignal::Nah);
                         }
-                    },
+                    }
                     _ => {
                         return Err(FruError::news("condition is not a boolean"));
                     }

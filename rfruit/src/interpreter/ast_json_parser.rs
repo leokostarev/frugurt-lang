@@ -77,8 +77,8 @@ fn convert(ast: &Value) -> Anything {
 
             Stmt(FruStatement::If {
                 cond: Box::new(cond),
-                then: Box::new(then),
-                else_: Box::new(else_),
+                then_body: Box::new(then),
+                else_body: Box::new(else_),
             })
         }
 
@@ -169,6 +169,21 @@ fn convert(ast: &Value) -> Anything {
                 .collect();
 
             Expr(FruExpression::Call {
+                what: Box::new(what),
+                args,
+            })
+        }
+
+        "curry" => {
+            let what = convert(&ast["what"]).as_expr();
+            let args = ast["args"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| convert(x).as_expr())
+                .collect();
+
+            Expr(FruExpression::CurryCall {
                 what: Box::new(what),
                 args,
             })

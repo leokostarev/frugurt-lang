@@ -1,3 +1,11 @@
-{
-    1
-}
+let min = fn(a, b) {
+    if (b) < (a) {
+        b
+    } else {
+        a
+    }
+};
+
+let m = (min)$(7);
+
+(print)((m)(10));

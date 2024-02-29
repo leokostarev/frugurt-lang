@@ -30,6 +30,10 @@ pub enum FruValue {
 pub enum AnyFunction {
     Function(Rc<FruFunction>),
     BuiltinFunction(Rc<TFnBuiltin>),
+    CurriedFunction {
+        saved_args: Vec<FruValue>,
+        function: Rc<AnyFunction>,
+    },
 }
 
 #[derive(Clone)]
@@ -94,6 +98,14 @@ impl AnyFunction {
         match self {
             AnyFunction::Function(func) => func.call(args),
             AnyFunction::BuiltinFunction(func) => func(args),
+            AnyFunction::CurriedFunction {
+                saved_args,
+                function,
+            } => {
+                let mut new_args = saved_args.clone();
+                new_args.extend(args);
+                function.call(new_args)
+            }
         }
     }
 }
@@ -147,6 +159,17 @@ impl Debug for AnyOperator {
         match self {
             AnyOperator::BuiltinOperator(_) => write!(f, "BuiltinOperator"),
             v => v.fmt(f),
+        }
+    }
+}
+
+impl Debug for AnyFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AnyFunction::Function(_) | AnyFunction::BuiltinFunction(_) => write!(f, "Function"),
+            AnyFunction::CurriedFunction { saved_args, .. } => {
+                write!(f, "CurriedFunction({:?})", saved_args)
+            }
         }
     }
 }

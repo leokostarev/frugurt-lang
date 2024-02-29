@@ -12,6 +12,10 @@ pub enum FruExpression {
         what: Box<FruExpression>,
         args: Vec<FruExpression>,
     },
+    CurryCall {
+        what: Box<FruExpression>,
+        args: Vec<FruExpression>,
+    },
     Binary {
         operator: Identifier,
         left: Box<FruExpression>,
@@ -39,6 +43,46 @@ impl FruExpression {
                             .map(|arg| arg.evaluate(scope.clone()))
                             .collect::<Result<Vec<FruValue>, FruError>>()?,
                     ),
+
+                    _ => FruError::new_err(format!(
+                        "{} is not a function",
+                        what.evaluate(scope.clone())?.get_type_identifier()
+                    )),
+                }
+            }
+
+            FruExpression::CurryCall { what, args } => {
+                let callee = what.evaluate(scope.clone())?;
+
+                match callee {
+                    FruValue::Function(func) => {
+                        let args = args
+                            .iter()
+                            .map(|arg| arg.evaluate(scope.clone()))
+                            .collect::<Result<Vec<FruValue>, FruError>>()?;
+
+                        match func {
+                            AnyFunction::CurriedFunction {
+                                saved_args,
+                                function,
+                            } => {
+                                let mut new_args = saved_args.clone();
+                                new_args.extend(args);
+
+                                Ok(FruValue::Function(AnyFunction::CurriedFunction {
+                                    saved_args: new_args,
+                                    function,
+                                }))
+                            }
+
+                            normal => {
+                                Ok(FruValue::Function(AnyFunction::CurriedFunction {
+                                    saved_args: args,
+                                    function: Rc::new(normal),
+                                }))
+                            },
+                        }
+                    }
 
                     _ => FruError::new_err(format!(
                         "{} is not a function",

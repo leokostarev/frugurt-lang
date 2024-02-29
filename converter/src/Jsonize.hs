@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 module Jsonize (toJsonExpr, toJsonStmt, toString) where
 
 import Data.List (intercalate)
@@ -15,7 +17,7 @@ data JSON
 
 
 toJsonExpr :: FruExpr -> JSON
-toJsonExpr expr = case expr of
+toJsonExpr = \case
   ExLiteralNumber i ->
     Object
       [ ("node", Str "literal")
@@ -31,14 +33,20 @@ toJsonExpr expr = case expr of
       [ ("node", Str "literal")
       , ("value", Str s)
       ]
-  ExVariable s ->
+  ExVariable ident ->
     Object
       [ ("node", Str "variable")
-      , ("ident", Str s)
+      , ("ident", Str ident)
       ]
   ExCall what args ->
     Object
       [ ("node", Str "call")
+      , ("what", toJsonExpr what)
+      , ("args", Array $ map toJsonExpr args)
+      ]
+  ExCurryCall what args ->
+    Object
+      [ ("node", Str "curry")
       , ("what", toJsonExpr what)
       , ("args", Array $ map toJsonExpr args)
       ]

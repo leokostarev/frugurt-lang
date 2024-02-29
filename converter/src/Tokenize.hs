@@ -42,6 +42,7 @@ data FruToken
   | TkBraceClose
   | TkParenOpen
   | TkParenClose
+  | TkDollarParenOpen
   | TkBracketOpen
   | TkBracketClose
   | TkSemiColon
@@ -67,6 +68,7 @@ fruTokenize =
           , TkBraceClose <$ char '}'
           , TkParenOpen <$ char '('
           , TkParenClose <$ char ')'
+          , TkDollarParenOpen <$ char '$' <* char '('
           , TkBracketOpen <$ char '['
           , TkBracketClose <$ char ']'
           , TkSemiColon <$ char ';'

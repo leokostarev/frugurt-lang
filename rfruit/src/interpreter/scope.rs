@@ -34,7 +34,7 @@ impl Scope {
         match (self.variables.borrow().get(&ident), &self.parent) {
             (Some(var), _) => Ok(var.clone()),
             (_, Some(parent)) => parent.get_variable(ident),
-            _ => FruError::new_err(format!("variable {:?} does not exist", ident)),
+            _ => FruError::new_err(format!("variable `{:?}` does not exist", ident)),
         }
     }
 
