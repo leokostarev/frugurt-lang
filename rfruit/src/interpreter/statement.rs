@@ -29,6 +29,9 @@ pub enum FruStatement {
     Return {
         value: Box<FruExpression>,
     },
+    BlockReturn {
+        value: Box<FruExpression>,
+    },
     Break,
     Continue,
     OperatorDefinition {
@@ -47,6 +50,7 @@ pub enum StatementSignal {
     Continue,
     Break,
     Return(FruValue),
+    BlockReturn(FruValue),
 }
 
 impl FruStatement {
@@ -108,30 +112,40 @@ impl FruStatement {
                 body,
             } => loop {
                 let result = condition.evaluate(scope.clone())?;
-                if let FruValue::Bool(b) = result {
-                    if b {
-                        let res = body.execute(scope.clone())?;
+                match result {
+                    FruValue::Bool(b) => {
+                        if b {
+                            let res = body.execute(scope.clone())?;
 
-                        match res {
-                            StatementSignal::Nah => {}
-                            StatementSignal::Continue => continue,
-                            StatementSignal::Break => return Ok(StatementSignal::Nah),
-                            StatementSignal::Return(v) => {
-                                return Ok(StatementSignal::Return(v));
+                            match res {
+                                StatementSignal::Nah => {}
+                                StatementSignal::Continue => continue,
+                                StatementSignal::Break => return Ok(StatementSignal::Nah),
+                                StatementSignal::Return(v) => {
+                                    return Ok(StatementSignal::Return(v));
+                                }
+                                StatementSignal::BlockReturn(_) => {
+                                    return Err(FruError::news("block return in while loop"));
+                                }
                             }
+                        } else {
+                            return Ok(StatementSignal::Nah);
                         }
-                    } else {
-                        return Ok(StatementSignal::Nah);
-                    };
-                } else {
-                    return Err(FruError::news("condition is not a boolean"));
+                    },
+                    _ => {
+                        return Err(FruError::news("condition is not a boolean"));
+                    }
                 }
             },
 
             FruStatement::Return { value } => {
                 let v = value.evaluate(scope)?;
-
                 return Ok(StatementSignal::Return(v));
+            }
+
+            FruStatement::BlockReturn { value } => {
+                let v = value.evaluate(scope)?;
+                return Ok(StatementSignal::BlockReturn(v));
             }
 
             FruStatement::Break => Ok(StatementSignal::Break),

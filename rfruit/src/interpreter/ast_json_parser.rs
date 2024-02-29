@@ -100,6 +100,14 @@ fn convert(ast: &Value) -> Anything {
             })
         }
 
+        "block_return" => {
+            let value = convert(&ast["value"]).as_expr();
+
+            Stmt(FruStatement::BlockReturn {
+                value: Box::new(value),
+            })
+        }
+
         "break" => Stmt(FruStatement::Break),
 
         "continue" => Stmt(FruStatement::Continue),

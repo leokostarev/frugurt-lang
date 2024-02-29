@@ -69,17 +69,17 @@ toJsonStmt stmt = case stmt of
       [ ("node", Str "expression")
       , ("value", toJsonExpr expression)
       ]
-  StLet ident value ->
+  StLet ident expression ->
     Object
       [ ("node", Str "let")
       , ("ident", Str ident)
-      , ("value", toJsonExpr value)
+      , ("value", toJsonExpr expression)
       ]
-  StSet ident value ->
+  StSet ident expression ->
     Object
       [ ("node", Str "set")
       , ("ident", Str ident)
-      , ("value", toJsonExpr value)
+      , ("value", toJsonExpr expression)
       ]
   StIf cond thenBody elseBody ->
     Object
@@ -94,10 +94,15 @@ toJsonStmt stmt = case stmt of
       , ("cond", toJsonExpr cond)
       , ("body", toJsonStmt body)
       ]
-  StReturn value ->
+  StReturn expression ->
     Object
       [ ("node", Str "return")
-      , ("value", toJsonExpr value)
+      , ("value", toJsonExpr expression)
+      ]
+  StBlockReturn expression ->
+    Object
+      [ ("node", Str "block_return")
+      , ("value", toJsonExpr expression)
       ]
   StBreak -> Object [("node", Str "break")]
   StContinue -> Object [("node", Str "continue")]
