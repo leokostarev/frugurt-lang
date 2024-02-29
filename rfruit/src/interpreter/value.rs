@@ -83,6 +83,7 @@ impl FruFunction {
         match res {
             StatementSignal::Nah => Ok(FruValue::None),
             StatementSignal::Return(v) => Ok(v),
+            StatementSignal::BlockReturn(v) => Ok(v),
             other => FruError::new_err(format!("unexpected signal {:?}", other)),
         }
     }

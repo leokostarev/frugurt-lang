@@ -39,6 +39,7 @@ data FruStmt
   | StIf FruExpr FruStmt FruStmt
   | StWhile FruExpr FruStmt
   | StReturn FruExpr
+  | StBlockReturn FruExpr
   | StBreak
   | StContinue
   | StOpDef String String String String String FruStmt
@@ -52,12 +53,22 @@ makeErrSet :: String -> Set (ErrorItem FruToken)
 makeErrSet = singleton . Label . NonEmpty.fromList
 
 
+makeComposite :: [FruStmt] -> FruStmt
+makeComposite stmts
+  | length stmts == 1 = head stmts
+  | otherwise = StComposite stmts
+
+
 -- parser
 
 type ParserStmt = Parsec Void [FruToken] FruStmt
 
 
 type ParserExpr = Parsec Void [FruToken] FruExpr
+
+
+semicolon :: Parsec Void [FruToken] FruToken
+semicolon = single TkSemiColon
 
 
 toAst :: ParserStmt
@@ -71,7 +82,7 @@ toAst = program
     stmt :: ParserStmt
     stmt =
       choice
-        [ try blockStmt
+        [ blockStmt
         , try letStmt
         , try setStmt
         , try ifElseStmt
@@ -85,18 +96,26 @@ toAst = program
         ]
 
     blockStmt :: ParserStmt
-    blockStmt = do
+    blockStmt = try blockReturnStmt <|> try blockSimpleStmt
+
+    blockSimpleStmt :: ParserStmt
+    blockSimpleStmt = do
       stmts <-
         between
           (single TkBraceOpen)
           (single TkBraceClose)
           (many stmt)
-      return $
-        if length stmts == 1
-          then head stmts
-          else StComposite stmts
+      return $ makeComposite stmts
 
-    semicolon = single TkSemiColon
+    blockReturnStmt :: ParserStmt
+    blockReturnStmt = do
+      _ <- single TkBraceOpen
+
+      stmts <- many stmt
+      retExpr <- expr
+
+      _ <- single TkBraceClose
+      return $ makeComposite (stmts ++ [StBlockReturn retExpr])
 
     exprStmt :: ParserStmt
     exprStmt = do
