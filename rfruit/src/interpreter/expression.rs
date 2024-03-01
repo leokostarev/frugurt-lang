@@ -55,8 +55,8 @@ impl FruExpression {
                     ),
 
                     _ => FruError::new_err(format!(
-                        "{} is not a function",
-                        what.evaluate(scope.clone())?.get_type_identifier()
+                        "{:?} is not a function",
+                        callee.get_type_identifier()
                     )),
                 }
             }

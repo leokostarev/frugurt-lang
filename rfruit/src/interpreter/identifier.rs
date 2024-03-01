@@ -12,7 +12,7 @@ pub struct Identifier {
     name: u64,
 }
 
-#[derive(Debug, Hash, PartialEq, Eq, Copy, Clone, PartialOrd, Ord)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone, PartialOrd, Ord)]
 pub struct OperatorIdentifier {
     pub op: Identifier,
     pub left: Identifier,
@@ -35,6 +35,11 @@ impl Identifier {
         Self { name: hash }
     }
 }
+impl OperatorIdentifier {
+    pub fn new(op: Identifier, left: Identifier, right: Identifier) -> Self {
+        Self { op, left, right }
+    }
+}
 
 impl Debug for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -44,12 +49,13 @@ impl Debug for Identifier {
 
 impl Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", unsafe { BACKWARDS_MAP.get(&self.name).unwrap() })
+        write!(f, "{:?}", self)
     }
 }
 
-impl OperatorIdentifier {
-    pub fn new(op: Identifier, left: Identifier, right: Identifier) -> Self {
-        Self { op, left, right }
+
+impl Debug for OperatorIdentifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Operator({} {} {})", self.left, self.op, self.right)
     }
-}
+} 

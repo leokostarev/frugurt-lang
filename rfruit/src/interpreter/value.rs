@@ -96,7 +96,7 @@ impl FruValue {
             FruValue::String(_) => Identifier::for_string(),
             FruValue::Function(_) => Identifier::for_function(),
             FruValue::StructType(_) => Identifier::for_struct_type(),
-            FruValue::StructObject(_) => Identifier::for_struct_object(),
+            FruValue::StructObject(obj) => obj.type_.name,
         }
     }
 
@@ -251,6 +251,7 @@ impl AnyOperator {
                 match res {
                     StatementSignal::Nah => Ok(FruValue::None),
                     StatementSignal::Return(v) => Ok(v),
+                    StatementSignal::BlockReturn(v) => Ok(v),
                     other => FruError::new_err(format!("unexpected signal {:?}", other)),
                 }
             }
