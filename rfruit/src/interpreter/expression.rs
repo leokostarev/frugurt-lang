@@ -1,6 +1,6 @@
 use super::{
-    AnyFunction, FruError, FruFunction, FruStatement, FruStructObject, FruValue, Identifier,
-    OperatorIdentifier, Scope,
+    AnyFunction, CurriedFunction, FruError, FruFunction, FruStatement, FruStructObject, FruValue,
+    Identifier, OperatorIdentifier, Scope,
 };
 use std::rc::Rc;
 
@@ -71,32 +71,31 @@ impl FruExpression {
                             .map(|arg| arg.evaluate(scope.clone()))
                             .collect::<Result<Vec<FruValue>, FruError>>()?;
 
-                        if args.len() > func.get_arg_count() {
-                            return FruError::new_err(format!(
-                                "too many arguments expected {}, got {}",
-                                func.get_arg_count(),
-                                args.len()
+                        if let Err(err) = func.get_arg_count().satisfies(args.len() as i32) {
+                            return FruError::new_err(format!("{:?}",
+                               err
                             ));
                         }
 
                         match func {
-                            AnyFunction::CurriedFunction {
-                                saved_args,
-                                function,
-                            } => {
-                                let mut new_args = saved_args.clone();
+                            AnyFunction::CurriedFunction(func) => {
+                                let mut new_args = func.saved_args.clone();
                                 new_args.extend(args);
 
-                                Ok(FruValue::Function(AnyFunction::CurriedFunction {
-                                    saved_args: new_args,
-                                    function,
-                                }))
+                                Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
+                                    CurriedFunction {
+                                        saved_args: new_args,
+                                        function: func.function.clone(),
+                                    },
+                                ))))
                             }
 
-                            normal => Ok(FruValue::Function(AnyFunction::CurriedFunction {
-                                saved_args: args,
-                                function: Rc::new(normal),
-                            })),
+                            normal => Ok(FruValue::Function(AnyFunction::CurriedFunction(
+                                Rc::new(CurriedFunction {
+                                    saved_args: args,
+                                    function: Rc::new(normal),
+                                }),
+                            ))),
                         }
                     }
 
@@ -145,7 +144,7 @@ impl FruExpression {
 
                         if args.len() != type_.fields.len() {
                             return FruError::new_err(format!(
-                                "expected {} arguments, got {}",
+                                "expected {} fields, got {}",
                                 type_.fields.len(),
                                 args.len()
                             ));
