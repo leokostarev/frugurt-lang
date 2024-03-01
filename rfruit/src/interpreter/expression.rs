@@ -1,6 +1,6 @@
 use super::{
-    AnyFunction, FruError, FruFunction, FruStatement, FruValue, Identifier, OperatorIdentifier,
-    Scope,
+    AnyFunction, FruError, FruFunction, FruStatement, FruStructObject, FruValue, Identifier,
+    OperatorIdentifier, Scope,
 };
 use std::rc::Rc;
 
@@ -25,6 +25,16 @@ pub enum FruExpression {
     FnDef {
         args: Vec<Identifier>,
         body: Rc<FruStatement>,
+    },
+
+    Instantiation {
+        what: Box<FruExpression>,
+        args: Vec<FruExpression>,
+    },
+
+    FieldAccess {
+        what: Box<FruExpression>,
+        field: Identifier,
     },
 }
 
@@ -61,6 +71,14 @@ impl FruExpression {
                             .map(|arg| arg.evaluate(scope.clone()))
                             .collect::<Result<Vec<FruValue>, FruError>>()?;
 
+                        if args.len() > func.get_arg_count() {
+                            return FruError::new_err(format!(
+                                "too many arguments expected {}, got {}",
+                                func.get_arg_count(),
+                                args.len()
+                            ));
+                        }
+
                         match func {
                             AnyFunction::CurriedFunction {
                                 saved_args,
@@ -75,12 +93,10 @@ impl FruExpression {
                                 }))
                             }
 
-                            normal => {
-                                Ok(FruValue::Function(AnyFunction::CurriedFunction {
-                                    saved_args: args,
-                                    function: Rc::new(normal),
-                                }))
-                            },
+                            normal => Ok(FruValue::Function(AnyFunction::CurriedFunction {
+                                saved_args: args,
+                                function: Rc::new(normal),
+                            })),
                         }
                     }
 
@@ -109,14 +125,58 @@ impl FruExpression {
                 op.operate(left_val, right_val)
             }
 
-            FruExpression::FnDef { args, body } => {
-                return Ok(FruValue::Function(AnyFunction::Function(Rc::new(
-                    FruFunction {
-                        argument_idents: args.clone(),
-                        body: body.clone(),
-                        scope: scope.clone(),
-                    },
-                ))));
+            FruExpression::FnDef { args, body } => Ok(FruValue::Function(AnyFunction::Function(
+                Rc::new(FruFunction {
+                    argument_idents: args.clone(),
+                    body: body.clone(),
+                    scope: scope.clone(),
+                }),
+            ))),
+
+            FruExpression::Instantiation { what, args } => {
+                let instantiated = what.evaluate(scope.clone())?;
+
+                match instantiated {
+                    FruValue::StructType(type_) => {
+                        let args = args
+                            .iter()
+                            .map(|arg| arg.evaluate(scope.clone()))
+                            .collect::<Result<Vec<FruValue>, FruError>>()?;
+
+                        if args.len() != type_.fields.len() {
+                            return FruError::new_err(format!(
+                                "expected {} arguments, got {}",
+                                type_.fields.len(),
+                                args.len()
+                            ));
+                        }
+
+                        Ok(FruValue::StructObject(FruStructObject {
+                            type_: type_,
+                            fields: args,
+                        }))
+                    }
+
+                    _ => {
+                        return FruError::new_err(format!(
+                            "cannot instantiate {}",
+                            instantiated.get_type_identifier()
+                        ))
+                    }
+                }
+            }
+
+            FruExpression::FieldAccess { what, field } => {
+                let what = what.evaluate(scope.clone())?;
+
+                match what {
+                    FruValue::StructObject(obj) => Ok(obj.get_field(*field)?),
+
+                    _ => FruError::new_err(format!(
+                        "cannot access field of {}",
+                        what.get_type_identifier()
+                    )),
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 use super::{
-    AnyOperator, FruError, FruExpression, FruValue, Identifier, OperatorIdentifier, Scope,
+    AnyOperator, FruError, FruExpression, FruStructType, FruValue, Identifier, OperatorIdentifier,
+    Scope,
 };
 use std::rc::Rc;
 
@@ -42,6 +43,16 @@ pub enum FruStatement {
         right_type: Identifier,
         body: Rc<FruStatement>,
     },
+    TypeDeclaration {
+        type_: TypeType,
+        ident: Identifier,
+        fields: Vec<Identifier>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum TypeType {
+    Struct, // class, data is coming
 }
 
 #[derive(Debug)]
@@ -168,6 +179,23 @@ impl FruStatement {
                         scope: scope.clone(),
                     },
                 );
+
+                Ok(StatementSignal::Nah)
+            }
+            FruStatement::TypeDeclaration {
+                type_,
+                ident,
+                fields,
+            } => {
+                scope.let_variable(
+                    *ident,
+                    match type_ {
+                        TypeType::Struct => FruValue::StructType(Rc::new(FruStructType {
+                            name: *ident,
+                            fields: fields.clone(),
+                        })),
+                    },
+                )?;
 
                 Ok(StatementSignal::Nah)
             }

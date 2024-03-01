@@ -1,0 +1,11 @@
+struct Vector2d {
+    x : Number;
+    pub y : Number;
+    z;
+}
+
+
+let a = (Vector2d){1, 2, 3};
+
+(print)(a); // Vector2d{x: 1, y: 2, z: 3} 
+(print)((a).x); // 1

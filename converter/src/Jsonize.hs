@@ -63,6 +63,18 @@ toJsonExpr = \case
       , ("args", Array $ map Str args)
       , ("body", toJsonStmt body)
       ]
+  ExInstantiation what args ->
+    Object
+      [ ("node", Str "instantiation")
+      , ("what", toJsonExpr what)
+      , ("args", Array $ map toJsonExpr args)
+      ]
+  ExFieldAccess what field ->
+    Object 
+      [ ("node", Str "field_access")
+      , ("what", toJsonExpr what)
+      , ("field", Str field)
+      ]
 
 
 toJsonStmt :: FruStmt -> JSON
@@ -114,7 +126,7 @@ toJsonStmt stmt = case stmt of
       ]
   StBreak -> Object [("node", Str "break")]
   StContinue -> Object [("node", Str "continue")]
-  StOpDef op left_arg left_type right_arg right_type body ->
+  StOperator op left_arg left_type right_arg right_type body ->
     Object
       [ ("node", Str "operator")
       , ("ident", Str op)
@@ -123,6 +135,13 @@ toJsonStmt stmt = case stmt of
       , ("right_arg", Str right_arg)
       , ("right_type", Str right_type)
       , ("body", toJsonStmt body)
+      ]
+  StType t ident fields ->
+    Object
+      [ ("node", Str "type")
+      , ("type", Str t)
+      , ("ident", Str ident)
+      , ("fields", Array $ map Str fields)
       ]
 
 

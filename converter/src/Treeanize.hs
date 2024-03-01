@@ -12,6 +12,7 @@ import Text.Megaparsec
   , between
   , choice
   , many
+  , optional
   , sepBy
   , single
   , (<|>)
@@ -29,6 +30,8 @@ data FruExpr
   | ExCurryCall FruExpr [FruExpr]
   | ExBinary String FruExpr FruExpr
   | ExFnDef [String] FruStmt
+  | ExInstantiation FruExpr [FruExpr] -- type object * field values
+  | ExFieldAccess FruExpr String
   deriving (Show, Eq)
 
 
@@ -43,8 +46,8 @@ data FruStmt
   | StBlockReturn FruExpr
   | StBreak
   | StContinue
-  | StOpDef String String String String String FruStmt
-  -- operator ident, left arg ident, left arg type ident, right arg ident, right arg type ident, body
+  | StOperator String String String String String FruStmt -- operator ident * left arg ident * left arg type ident * right arg ident * right arg type ident * body
+  | StType String String [String] -- ("struct") * ident * field idents
   deriving (Show, Eq)
 
 
@@ -68,8 +71,8 @@ type ParserStmt = Parsec Void [FruToken] FruStmt
 type ParserExpr = Parsec Void [FruToken] FruExpr
 
 
-semicolon :: Parsec Void [FruToken] FruToken
-semicolon = single TkSemiColon
+identifier :: Parsec Void [FruToken] String
+identifier = token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
 
 
 toAst :: ParserStmt
@@ -93,6 +96,7 @@ toAst = program
         , try breakStmt
         , try continueStmt
         , try operatorDefStmt
+        , try typeDefStmt
         , try exprStmt
         ]
 
@@ -121,24 +125,24 @@ toAst = program
     exprStmt :: ParserStmt
     exprStmt = do
       ex <- expr
-      _ <- semicolon
+      _ <- single TkSemiColon
       return $ StExpr ex
 
     letStmt :: ParserStmt
     letStmt = do
       _ <- single TkLet
-      name <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      name <- identifier
       _ <- single (TkOp "=")
       value <- expr
-      _ <- semicolon
+      _ <- single TkSemiColon
       return $ StLet name value
 
     setStmt :: ParserStmt
     setStmt = do
-      name <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      name <- identifier
       _ <- single (TkOp "=")
       value <- expr
-      _ <- semicolon
+      _ <- single TkSemiColon
       return $ StSet name value
 
     ifStmt :: ParserStmt
@@ -166,45 +170,69 @@ toAst = program
     returnStmt = do
       _ <- single TkReturn
       value <- expr
-      _ <- semicolon
+      _ <- single TkSemiColon
       return $ StReturn value
 
     breakStmt :: ParserStmt
-    breakStmt = StBreak <$ single TkBreak <* semicolon
+    breakStmt = StBreak <$ single TkBreak <* single TkSemiColon
 
     continueStmt :: ParserStmt
-    continueStmt = StContinue <$ single TkContinue <* semicolon
+    continueStmt = StContinue <$ single TkContinue <* single TkSemiColon
 
     operatorDefStmt :: ParserStmt
     operatorDefStmt = do
       _ <- single TkOpDef
-      ident <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      ident <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "operator")
       _ <- single TkParenOpen
 
-      leftIdent <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      leftIdent <- identifier
       _ <- single TkColon
-      leftType <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "type-identifier")
+      leftType <- identifier
 
       _ <- single TkComma
 
-      rightIdent <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
+      rightIdent <- identifier
       _ <- single TkColon
-      rightType <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "type-identifier")
+      rightType <- identifier
 
       _ <- single TkParenClose
 
-      StOpDef ident leftIdent leftType rightIdent rightType <$> blockStmt
+      StOperator ident leftIdent leftType rightIdent rightType <$> blockStmt
+
+    typeDefStmt :: ParserStmt
+    typeDefStmt = do
+      _ <- single TkStruct
+
+      ident <- identifier
+
+      _ <- single TkBraceOpen
+
+      fields <- many field
+
+      _ <- single TkBraceClose
+
+      return $ StType "struct" ident fields
+      where
+        field = do
+          _ <- optional $ single TkPub
+          ident <- identifier
+          _ <- optional $ single TkColon <* identifier
+          _ <- single TkSemiColon
+          return ident
 
     expr :: ParserExpr
     expr =
       choice
+        -- \$ map (\x -> x <* notFollowedBy (single TkBraceOpen)) -- hint to normal calls and instantiations
         [ literalNumber
         , literalBool
         , literalString
-        , variable
+        , try variable
         , try binary
         , try call
         , try curryCall
+        , try instantiation
+        , try fieldAccess
         , try paren
         , try fnDef
         ]
@@ -225,9 +253,7 @@ toAst = program
           return $ ExLiteralString value
 
         variable :: ParserExpr
-        variable = do
-          ident <- token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
-          return $ ExVariable ident
+        variable = ExVariable <$> identifier
 
         paren :: ParserExpr
         paren =
@@ -271,8 +297,25 @@ toAst = program
               (single TkParenOpen)
               (single TkParenClose)
               ( sepBy
-                  (token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier"))
+                  identifier
                   (single TkComma)
               )
 
           ExFnDef args <$> blockStmt
+
+        instantiation :: ParserExpr
+        instantiation = do
+          what <- paren
+          args <-
+            between
+              (single TkBraceOpen)
+              (single TkBraceClose)
+              (sepBy expr (single TkComma))
+
+          return $ ExInstantiation what args
+
+        fieldAccess :: ParserExpr
+        fieldAccess = do
+          what <- paren
+          _ <- single TkDot
+          ExFieldAccess what <$> identifier

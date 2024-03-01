@@ -22,18 +22,25 @@ pub enum FruValue {
     // Set(HashSet<FruValue>),
 
     // ---oop---
-    // StructType(FruStructType),
-    // StructObject(FruStructObject),
+    StructType(Rc<FruStructType>),
+    StructObject(FruStructObject),
 }
 
 #[derive(Clone)]
 pub enum AnyFunction {
+    // TODO: extract curried function to struct
     Function(Rc<FruFunction>),
     BuiltinFunction(Rc<TFnBuiltin>),
     CurriedFunction {
         saved_args: Vec<FruValue>,
         function: Rc<AnyFunction>,
     },
+}
+
+pub struct FruFunction {
+    pub argument_idents: Vec<Identifier>,
+    pub body: Rc<FruStatement>,
+    pub scope: Rc<Scope>,
 }
 
 #[derive(Clone)]
@@ -47,10 +54,17 @@ pub enum AnyOperator {
     BuiltinOperator(Rc<TOpBuiltin>),
 }
 
-pub struct FruFunction {
-    pub argument_idents: Vec<Identifier>,
-    pub body: Rc<FruStatement>,
-    pub scope: Rc<Scope>,
+#[derive(Clone)]
+pub struct FruStructType {
+    pub name: Identifier,
+    pub fields: Vec<Identifier>,
+    // a lot of expected here :: methods / static functions / watches / etc
+}
+
+#[derive(Clone)]
+pub struct FruStructObject {
+    pub type_: Rc<FruStructType>,
+    pub fields: Vec<FruValue>,
 }
 
 impl FruValue {
@@ -61,6 +75,19 @@ impl FruValue {
             FruValue::Bool(_) => Identifier::for_bool(),
             FruValue::String(_) => Identifier::for_string(),
             FruValue::Function(_) => Identifier::for_function(),
+            FruValue::StructType(_) => Identifier::for_struct_type(),
+            FruValue::StructObject(_) => Identifier::for_struct_object(),
+        }
+    }
+
+    pub fn get_field(&self, ident: Identifier) -> Result<FruValue, FruError> {
+        match self {
+            FruValue::StructObject(obj) => obj.get_field(ident),
+
+            _ => FruError::new_err(format!(
+                "expected struct object, got {:?}",
+                self.get_type_identifier()
+            )),
         }
     }
 }
@@ -108,6 +135,17 @@ impl AnyFunction {
             }
         }
     }
+
+    pub fn get_arg_count(&self) -> usize {
+        match self {
+            AnyFunction::Function(func) => func.argument_idents.len(),
+            AnyFunction::BuiltinFunction(_) => 0,
+            AnyFunction::CurriedFunction {
+                saved_args,
+                function,
+            } => function.get_arg_count() - saved_args.len(),
+        }
+    }
 }
 
 impl AnyOperator {
@@ -119,7 +157,7 @@ impl AnyOperator {
                 body,
                 scope,
             } => {
-                let mut new_scope = Scope::new_with_parent(scope.clone());
+                let new_scope = Scope::new_with_parent(scope.clone());
                 new_scope.let_variable(*left_ident, left_val)?;
                 new_scope.let_variable(*right_ident, right_val)?;
 
@@ -136,6 +174,17 @@ impl AnyOperator {
     }
 }
 
+impl FruStructObject {
+    pub fn get_field(&self, ident: Identifier) -> Result<FruValue, FruError> {
+        for (i, field_ident) in self.type_.fields.iter().enumerate() {
+            if *field_ident == ident {
+                return Ok(self.fields[i].clone());
+            }
+        }
+        FruError::new_err(format!("field {} not found", ident))
+    }
+}
+
 impl Debug for FruValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -143,7 +192,9 @@ impl Debug for FruValue {
             FruValue::Number(v) => write!(f, "{}", v),
             FruValue::Bool(v) => write!(f, "{}", v),
             FruValue::String(v) => write!(f, "{}", v),
-            FruValue::Function(_) => write!(f, "Function"),
+            FruValue::Function(fun) => write!(f, "{:?}", fun),
+            FruValue::StructType(type_) => write!(f, "{:?}", type_),
+            FruValue::StructObject(obj) => write!(f, "{:?}", obj),
         }
     }
 }
@@ -167,9 +218,37 @@ impl Debug for AnyFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AnyFunction::Function(_) | AnyFunction::BuiltinFunction(_) => write!(f, "Function"),
-            AnyFunction::CurriedFunction { saved_args, .. } => {
-                write!(f, "CurriedFunction({:?})", saved_args)
+            AnyFunction::CurriedFunction {
+                saved_args,
+                function,
+            } => {
+                write!(
+                    f,
+                    "CurriedFunction({:?}/{:?})",
+                    saved_args,
+                    function.get_arg_count()
+                )
             }
         }
+    }
+}
+
+impl Debug for FruStructType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
+
+impl Debug for FruStructObject {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}{{", self.type_)?;
+        let total_fields = self.type_.fields.len();
+        for (i, field) in self.type_.fields.iter().enumerate() {
+            write!(f, "{}: {:?}", field, self.fields[i])?;
+            if i < total_fields - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, "}}")
     }
 }

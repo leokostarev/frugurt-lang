@@ -1,4 +1,4 @@
-use super::{FruExpression, FruStatement, FruValue, Identifier};
+use super::{FruExpression, FruStatement, FruValue, Identifier, TypeType};
 use serde_json::Value;
 use std::rc::Rc;
 
@@ -130,6 +130,26 @@ fn convert(ast: &Value) -> Anything {
             })
         }
 
+        "type" => {
+            let type_ = ast["type"].as_str().unwrap();
+            let ident = ast["ident"].as_str().unwrap();
+            let fields = ast["fields"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| Identifier::new(x.as_str().unwrap()))
+                .collect();
+
+            Stmt(FruStatement::TypeDeclaration {
+                type_: match type_ {
+                    "struct" => TypeType::Struct,
+                    other => panic!("only structs are supported now, not {}", other),
+                },
+                ident: Identifier::new(ident),
+                fields,
+            })
+        }
+
         // expressions
         "literal" => match &ast["value"] {
             Value::Number(n) => {
@@ -214,6 +234,31 @@ fn convert(ast: &Value) -> Anything {
             Expr(FruExpression::FnDef {
                 args,
                 body: Rc::new(body),
+            })
+        }
+
+        "instantiation" => {
+            let what = convert(&ast["what"]).as_expr();
+            let args = ast["args"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|x| convert(x).as_expr())
+                .collect();
+
+            Expr(FruExpression::Instantiation {
+                what: Box::new(what),
+                args,
+            })
+        }
+
+        "field_access" => {
+            let what = convert(&ast["what"]).as_expr();
+            let field = ast["field"].as_str().unwrap();
+
+            Expr(FruExpression::FieldAccess {
+                what: Box::new(what),
+                field: Identifier::new(field),
             })
         }
 

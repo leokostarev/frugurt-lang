@@ -7,12 +7,12 @@ The main purpose of Frugurt is to present different approach to OOP, than in oth
 Example
 ```
 let sq = fn(i) {
-    return (i) * (i);
+    (i) * (i)
 };
 
-(print)((sq)(7)); // prints 49
-
+(print)((sq)(7)); // 49
 ```
+
 Note: the heavy use of parentheses is not because thay are special syntax, but because I am bad at making parsers. :sob:
 
 
@@ -24,8 +24,8 @@ All types have fixed schema, that means:
 
 Also, there are 3 flavors of types:
 - struct - mutable, passed by value
-- classs - mutable, passed by reference
-- record - immutable, passed by reference
+- class - mutable, passed by reference
+- data - immutable, passed by reference
 
 Also, there is builtin data validation, using "watches"
 
@@ -35,8 +35,10 @@ struct Vector {
     x;
     y;
 
+    -----static-----
+
     fn new(x, y) {
-        return Vector {
+        return Vector { // returning by keyword
             x = x,
             y = y,
         };
@@ -45,10 +47,10 @@ struct Vector {
     -----impl-----
 
     fn add(v1, v2) {
-        return Vector {
+        Vector { // returning by absence of semicolon in last expression
             x = v1.x + v2.x,
             y = v1.y + v2.y,
-        };
+        }
     }
 
     -----constraints-----
@@ -88,7 +90,7 @@ Note: `-----constraints-----` and `-----impl-----` are keywords, you can find fu
 
 
 # THE FEATURES THAT HAVE BEEN DONE:
-- keywords: fn, if, while, return, break, continue, operator
+- keywords: fn, if, while, return, break, continue, operator, struct
 - types: int, bool, string
-- concepts: functions, control flow, operators
+- concepts: functions, control flow, operators, currying, no semicolon return, user data types(partially implemented),
 - fuctions: print

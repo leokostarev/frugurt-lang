@@ -38,6 +38,14 @@ impl Id {
         return Self::new("Function");
     }
 
+    pub fn for_struct_type() -> Self {
+        return Self::new("StructType");
+    }
+    
+    pub fn for_struct_object() -> Self {
+        return Self::new("StructObject");
+    }
+
     // builtin operators
     pub fn for_plus() -> Self {
         return Self::new("+");
