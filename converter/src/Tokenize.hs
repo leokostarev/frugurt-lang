@@ -42,6 +42,7 @@ data FruToken
   | TkPub
   | TkBraceOpen -- punctuation
   | TkBraceClose
+  | TkColonBraceOpen
   | TkParenOpen
   | TkParenClose
   | TkDollarParenOpen
@@ -69,6 +70,7 @@ fruTokenize =
       ( choice
           [ TkBraceOpen <$ char '{' -- punctuation
           , TkBraceClose <$ char '}'
+          , TkColonBraceOpen <$ string ":{"
           , TkParenOpen <$ char '('
           , TkParenClose <$ char ')'
           , TkDollarParenOpen <$ char '$' <* char '('
@@ -78,14 +80,15 @@ fruTokenize =
           , TkColon <$ char ':'
           , TkDot <$ char '.'
           , TkComma <$ char ','
+          , TkOp <$> operator -- operator
           , try (TkNumber <$> literalNumber) -- literals
           , TkBool <$> literalBool
           , TkString <$> literalString
-          , TkOp <$> operator -- operator
           , keywordOrIdent -- keyword or identifier
           ]
           <* sc
       )
+    <* eof
   where
     literalNumber = L.signed sc L.scientific
 

@@ -26,10 +26,18 @@ fn main() {
     let json_ast = match json_ast_or_err {
         Ok(x) => x,
         Err(x) => {
-            println!("{}", x);
+            eprintln!("Json is invalid: {}", x);
+            println!("{}", text);
             std::process::exit(1);
         }
     };
+
+    if let Some(x) = json_ast.as_object() {
+        if let Some(x) = x.get("error") {
+            eprintln!("Error occured during parsing: {}", x.as_str().unwrap());
+            eprintln!("Details: {}", x.get("message").unwrap().as_str().unwrap());
+        }
+    }
 
     let ast = interpreter::ast_json_parser::parse(json_ast);
 

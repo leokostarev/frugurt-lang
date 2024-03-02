@@ -29,7 +29,7 @@ data FruExpr
   | ExCall FruExpr [FruExpr]
   | ExCurryCall FruExpr [FruExpr]
   | ExBinary String FruExpr FruExpr
-  | ExFnDef [String] FruStmt
+  | ExFunction [String] FruStmt
   | ExInstantiation FruExpr [FruExpr] -- type object * field values
   | ExFieldAccess FruExpr String
   deriving (Show, Eq)
@@ -71,6 +71,9 @@ type ParserStmt = Parsec Void [FruToken] FruStmt
 type ParserExpr = Parsec Void [FruToken] FruExpr
 
 
+type ParserExtExpr = Parsec Void [FruToken] (FruExpr -> FruExpr)
+
+
 identifier :: Parsec Void [FruToken] String
 identifier = token (\case TkIdent x -> Just x; _ -> Nothing) (makeErrSet "identifier")
 
@@ -81,7 +84,7 @@ toAst = program
     program :: ParserStmt
     program = do
       stmts <- many stmt <* eof
-      return $ StComposite stmts
+      return $ makeComposite stmts
 
     stmt :: ParserStmt
     stmt =
@@ -149,22 +152,22 @@ toAst = program
     ifStmt = do
       _ <- single TkIf
       cond <- expr
-      thenBody <- blockStmt
+      thenBody <- blockSimpleStmt
       return $ StIf cond thenBody (StComposite [])
 
     ifElseStmt :: ParserStmt
     ifElseStmt = do
       _ <- single TkIf
       cond <- expr
-      thenBody <- blockStmt
+      thenBody <- blockSimpleStmt
       _ <- single TkElse
-      StIf cond thenBody <$> (blockStmt <|> ifElseStmt <|> ifStmt)
+      StIf cond thenBody <$> (blockSimpleStmt <|> ifElseStmt <|> ifStmt)
 
     whileStmt :: ParserStmt
     whileStmt = do
       _ <- single TkWhile
       cond <- expr
-      StWhile cond <$> blockStmt
+      StWhile cond <$> blockSimpleStmt
 
     returnStmt :: ParserStmt
     returnStmt = do
@@ -221,26 +224,36 @@ toAst = program
           return ident
 
     expr :: ParserExpr
-    expr =
-      choice
-        -- \$ map (\x -> x <* notFollowedBy (single TkBraceOpen)) -- hint to normal calls and instantiations
-        [ literalNumber
-        , literalBool
-        , literalString
-        , try variable
-        , try binary
-        , try call
-        , try curryCall
-        , try instantiation
-        , try fieldAccess
-        , try paren
-        , try fnDef
-        ]
+    expr = do
+      ex <- simpleExpr
+      extensions <- many extensionExpr
+
+      return $ foldl (flip ($)) ex extensions
       where
+        simpleExpr :: ParserExpr
+        simpleExpr =
+          choice
+            [ literalNumber
+            , literalBool
+            , literalString
+            , variableExpr
+            , parenExpr
+            , functionExpr
+            ]
+
+        extensionExpr :: ParserExtExpr
+        extensionExpr =
+          choice
+            [ try callExpr
+            , try curryCallExpr
+            , try instantiationExpr
+            , try fieldAccessExpr
+            , try binaryExpr
+            ]
+
         literalNumber :: ParserExpr
-        literalNumber = do
-          value <- token (\case TkNumber x -> Just x; _ -> Nothing) (makeErrSet "number")
-          return $ ExLiteralNumber value
+        literalNumber = ExLiteralNumber <$> token (\case TkNumber x -> Just x; _ -> Nothing) (makeErrSet "number")
+
 
         literalBool :: ParserExpr
         literalBool = do
@@ -252,45 +265,18 @@ toAst = program
           value <- token (\case TkString x -> Just x; _ -> Nothing) (makeErrSet "string")
           return $ ExLiteralString value
 
-        variable :: ParserExpr
-        variable = ExVariable <$> identifier
+        variableExpr :: ParserExpr
+        variableExpr = ExVariable <$> identifier
 
-        paren :: ParserExpr
-        paren =
+        parenExpr :: ParserExpr
+        parenExpr =
           between
             (single TkParenOpen)
             (single TkParenClose)
             expr
 
-        call :: ParserExpr
-        call = do
-          what <- paren
-          args <-
-            between
-              (single TkParenOpen)
-              (single TkParenClose)
-              (sepBy expr (single TkComma))
-          return $ ExCall what args
-
-        curryCall :: ParserExpr
-        curryCall = do
-          what <- paren
-          args <-
-            between
-              (single TkDollarParenOpen)
-              (single TkParenClose)
-              (sepBy expr (single TkComma))
-
-          return $ ExCurryCall what args
-
-        binary :: ParserExpr
-        binary = do
-          left <- paren
-          op <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "operator")
-          ExBinary op left <$> paren
-
-        fnDef :: ParserExpr
-        fnDef = do
+        functionExpr :: ParserExpr
+        functionExpr = do
           _ <- single TkFn
           args <-
             between
@@ -301,21 +287,43 @@ toAst = program
                   (single TkComma)
               )
 
-          ExFnDef args <$> blockStmt
+          ExFunction args <$> blockStmt
 
-        instantiation :: ParserExpr
-        instantiation = do
-          what <- paren
+        callExpr :: ParserExtExpr
+        callExpr = do
           args <-
             between
-              (single TkBraceOpen)
+              (single TkParenOpen)
+              (single TkParenClose)
+              (sepBy expr (single TkComma))
+          return (`ExCall` args)
+
+        curryCallExpr :: ParserExtExpr
+        curryCallExpr = do
+          args <-
+            between
+              (single TkDollarParenOpen)
+              (single TkParenClose)
+              (sepBy expr (single TkComma))
+          return (`ExCurryCall` args)
+
+        binaryExpr :: ParserExtExpr
+        binaryExpr = do
+          op <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "operator")
+          right <- expr
+          return $ \left -> ExBinary op left right
+
+        instantiationExpr :: ParserExtExpr
+        instantiationExpr = do
+          args <-
+            between
+              (single TkColonBraceOpen)
               (single TkBraceClose)
               (sepBy expr (single TkComma))
+          return (`ExInstantiation` args)
 
-          return $ ExInstantiation what args
-
-        fieldAccess :: ParserExpr
-        fieldAccess = do
-          what <- paren
+        fieldAccessExpr :: ParserExtExpr
+        fieldAccessExpr = do
           _ <- single TkDot
-          ExFieldAccess what <$> identifier
+          ident <- identifier
+          return (`ExFieldAccess` ident)

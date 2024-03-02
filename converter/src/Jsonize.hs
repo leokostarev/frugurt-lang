@@ -1,6 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 
-module Jsonize (toJsonExpr, toJsonStmt, toString) where
+module Jsonize (toJsonExpr, toJsonStmt, toString, JSON (..)) where
 
 import Data.List (intercalate)
 import Data.Scientific (toRealFloat)
@@ -57,7 +57,7 @@ toJsonExpr = \case
       , ("left", toJsonExpr left)
       , ("right", toJsonExpr right)
       ]
-  ExFnDef args body ->
+  ExFunction args body ->
     Object
       [ ("node", Str "function")
       , ("args", Array $ map Str args)
@@ -70,7 +70,7 @@ toJsonExpr = \case
       , ("args", Array $ map toJsonExpr args)
       ]
   ExFieldAccess what field ->
-    Object 
+    Object
       [ ("node", Str "field_access")
       , ("what", toJsonExpr what)
       , ("field", Str field)

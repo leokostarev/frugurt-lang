@@ -1,6 +1,6 @@
 use super::{
-    AnyFunction, CurriedFunction, FruError, FruFunction, FruStatement, FruStructObject, FruValue,
-    Identifier, OperatorIdentifier, Scope,
+    AnyFunction, ArgCountError, CurriedFunction, FruError, FruFunction, FruStatement,
+    FruStructObject, FruValue, Identifier, OperatorIdentifier, Scope,
 };
 use std::rc::Rc;
 
@@ -72,9 +72,12 @@ impl FruExpression {
                             .collect::<Result<Vec<FruValue>, FruError>>()?;
 
                         if let Err(err) = func.get_arg_count().satisfies(args.len() as i32) {
-                            return FruError::new_err(format!("{:?}",
-                               err
-                            ));
+                            match err {
+                                ArgCountError::TooFewArgs { .. } => {}
+                                _ => {
+                                    return FruError::new_err(format!("{:?}", err));
+                                }
+                            }
                         }
 
                         match func {
@@ -151,7 +154,7 @@ impl FruExpression {
                         }
 
                         Ok(FruValue::StructObject(FruStructObject {
-                            type_: type_,
+                            type_,
                             fields: args,
                         }))
                     }

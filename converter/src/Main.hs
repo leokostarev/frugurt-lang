@@ -5,6 +5,7 @@ module Main
 import Control.Monad (unless, when)
 import Data.Either (fromRight, isLeft)
 import Data.List (intercalate)
+import Debugize (toDbgStrStmt)
 import Jsonize (toJsonStmt, toString)
 import System.Environment (getArgs)
 import System.Exit (exitFailure)
@@ -14,7 +15,7 @@ import Treeanize (toAst)
 
 
 possibleFlags :: [String]
-possibleFlags = ["--detailed"]
+possibleFlags = ["--debug"]
 
 
 main :: IO ()
@@ -32,37 +33,40 @@ main = do
     print $ "Unknown flags" ++ intercalate ", " unknownFlags
     exitFailure
 
-  let detailedFlag = "--detailed" `elem` flags
+  let debugFlag = "--debug" `elem` flags
 
   raw <- readFile name
 
   -- tokens --
   let toksOrErr = parse fruTokenize name raw
   when (isLeft toksOrErr) $ do
-    putStrLn "---------- ERROR WHILE TOKENIZING ----------"
-    print toksOrErr
+    when debugFlag $ do
+      putStrLn "---------- ERROR WHILE TOKENIZING ----------"
+      print toksOrErr
+    unless debugFlag $ do
+      putStrLn ("{\"error\": \"tokenizing\", \"message\": " ++ show toksOrErr ++ "}")
     exitFailure
 
   let toks = fromRight undefined toksOrErr
 
-  when detailedFlag $ do
+  when debugFlag $ do
     putStrLn "---------- TOKENS ----------"
-    putStrLn $ intercalate "\n" $ map (("| " ++) . show) toks
+    putStrLn (intercalate "\n" $ map (("| " ++) . show) toks)
 
   -- ast --
   let astOrErr = parse toAst name toks
   when (isLeft astOrErr) $ do
-    putStrLn "---------- ERROR WHILE TREEANIZING ----------"
-    print astOrErr
+    when debugFlag $ do
+      putStrLn "---------- ERROR WHILE TREEANIZING ----------"
+      print astOrErr
+    unless debugFlag $ do
+      putStrLn ("{\"error\": \"treeanizing\", \"message\": \"" ++ show astOrErr ++ "\"}")
     exitFailure
 
   let ast = fromRight undefined astOrErr
-  when detailedFlag $ do
+  when debugFlag $ do
     putStrLn "---------- AST ------------"
-    print ast
+    putStrLn (toDbgStrStmt 0 ast)
 
-  let str = toString $ toJsonStmt ast
-  when detailedFlag $ do
-    putStrLn "---------- STRING ----------"
-
-  putStrLn str
+  unless debugFlag $ do
+    putStrLn (toString $ toJsonStmt ast)
