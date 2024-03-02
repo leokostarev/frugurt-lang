@@ -1,9 +1,11 @@
-let sq = fn(i) { (i) * (i) };
+let sq = fn(i) {
+    i * i
+};
 
 /*
 let sq = fn(i) { // the same thing
-    return (i) * (i);
+    return i * i;
 };
 */
 
-(print)((sq)(7));
+print(sq(7)); // 49

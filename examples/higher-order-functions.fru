@@ -1,9 +1,9 @@
 let dec = fn(f) {
-    fn(x) { ((f)(x)) + (1) }
+    fn(x) { f(x) + 1 }
 };
 
-let sq = fn(x) { (x) * (x) };
+let sq = fn(x) { x * x };
 
-let fancy = (dec)(sq);
+let fancy = dec(sq);
 
-(print)((fancy)(7));
+print(fancy(7)); // 50

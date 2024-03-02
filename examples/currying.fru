@@ -1,11 +1,11 @@
 let sum3 = fn(a, b, c) {
-    ((a) + (b)) + (c)
+    a + b + c
 };
 
-let app1 = (sum3)$(7);
+let app1 = sum3$(7);
 
-(print)((app1)(10, 12)); // 29
+print(app1(10, 12)); // 29
 
-let app2 = (app1)$(1);
+let app2 = app1$(1);
 
-(print)((app2)(4)); // 12
+print(app2(4)); // 12

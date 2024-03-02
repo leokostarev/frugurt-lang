@@ -1,19 +1,18 @@
 Frugurt is interpreted language, with focus on functional and OOP.
 
-Note: MOST OF THE FEATURES ARE NOT IMPLEMENTED YET!
+Note: SOME OF THE FEATURES ARE NOT IMPLEMENTED YET!
 
 The main purpose of Frugurt is to present different approach to OOP, than in other languages like Python or JavaScript.
 
 Example
 ```
 let sq = fn(i) {
-    (i) * (i)
+    i * i
 };
 
-(print)((sq)(7)); // 49
-```
+print(sq(7)); // 49
 
-Note: the heavy use of parentheses is not because thay are special syntax, but because I am bad at making parsers. :sob:
+```
 
 
 My main goal is to make objects strictly typed (not variables!).
@@ -56,19 +55,19 @@ struct Vector {
     -----constraints-----
 
     watch (x) {
-        if (x) < (1000) {
-            x = 1000;
+        if x < -1000 {
+            x = -1000;
         }
-        if (x) > (1000) {
+        if x > 1000 {
             x = 1000;
         }
     }
 
     watch (y) {
-        if (y) < (1000) {
-            y = 1000;
+        if y < -1000 {
+            y = -1000;
         }
-        if (y) > (1000) {
+        if y > 1000 {
             y = 1000;
         }
     }

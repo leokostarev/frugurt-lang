@@ -5,14 +5,14 @@ struct Vector {
 
 
 operator <+> (v1 : Vector, v2 : Vector) {
-    (Vector){
-        ((v1).x) + ((v2).x),
-        ((v1).y) + ((v2).y)
+    Vector:{
+        v1.x + v2.x,
+        v1.y + v2.y
    }
 }
 
-let v1 = (Vector){1, 2};
-let v2 = (Vector){3, 4};
-let v3 = (v1) <+> (v2);
+let v1 = Vector:{1, 2};
+let v2 = Vector:{3, 4};
+v2 = v1 <+> v2;
 
-(print)(v3);
+print(v2); // Vector{x: 4, y: 6}

@@ -1,12 +1,12 @@
-let a = (500) + (50);
-if (a) < (100) {
-    (print)(true);
+let a = 500 + 50;
+if a < 100 {
+    print(true);
 }
 
 let b = 5;
-while (b) < (10) {
-    a = (a) + (b);
-    b = (b) + (1);
+while b < 10 {
+    a = a + b;
+    b = b + 1;
 }
 
-(print)(a);
+print(a);
