@@ -34,7 +34,7 @@ fn b_input(args: Vec<FruValue>) -> Result<FruValue, FruError> {
     if args.len() == 1 {
         print!("{:?}: ", args[0]);
     }
-    
+
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
     Ok(FruValue::String(input.trim().to_string()))

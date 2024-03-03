@@ -1,6 +1,6 @@
 use super::{
-    AnyFunction, ArgCountError, CurriedFunction, FruError, FruFunction, FruStatement,
-    FruStructObject, FruValue, Identifier, OperatorIdentifier, Scope,
+    AnyFunction, FruError, FruFunction, FruStatement, FruValue, Identifier, OperatorIdentifier,
+    Scope,
 };
 use std::rc::Rc;
 
@@ -21,21 +21,28 @@ pub enum FruExpression {
         left: Box<FruExpression>,
         right: Box<FruExpression>,
     },
-
-    FnDef {
+    Function {
         args: Vec<Identifier>,
         body: Rc<FruStatement>,
     },
-
     Instantiation {
         what: Box<FruExpression>,
         args: Vec<FruExpression>,
     },
-
     FieldAccess {
         what: Box<FruExpression>,
         field: Identifier,
     },
+}
+macro_rules! args_to_lambda {
+    ($args:ident, $scope:ident) => {
+        || {
+            Ok($args
+                .iter()
+                .map(|arg| arg.evaluate($scope.clone()))
+                .collect::<Result<Vec<FruValue>, FruError>>()?)
+        }
+    };
 }
 
 impl FruExpression {
@@ -47,66 +54,18 @@ impl FruExpression {
 
             FruExpression::Call { what, args } => {
                 let callee = what.evaluate(scope.clone())?;
-                match callee {
-                    FruValue::Function(func) => func.call(
-                        args.iter()
-                            .map(|arg| arg.evaluate(scope.clone()))
-                            .collect::<Result<Vec<FruValue>, FruError>>()?,
-                    ),
+                let args_count = args.len() as i32;
+                let args = args_to_lambda!(args, scope);
 
-                    _ => FruError::new_err(format!(
-                        "{:?} is not a function",
-                        callee.get_type_identifier()
-                    )),
-                }
+                callee.call(args_count, args)
             }
 
             FruExpression::CurryCall { what, args } => {
                 let callee = what.evaluate(scope.clone())?;
+                let arg_count = args.len() as i32;
+                let args = args_to_lambda!(args, scope);
 
-                match callee {
-                    FruValue::Function(func) => {
-                        let args = args
-                            .iter()
-                            .map(|arg| arg.evaluate(scope.clone()))
-                            .collect::<Result<Vec<FruValue>, FruError>>()?;
-
-                        if let Err(err) = func.get_arg_count().satisfies(args.len() as i32) {
-                            match err {
-                                ArgCountError::TooFewArgs { .. } => {}
-                                _ => {
-                                    return FruError::new_err(format!("{:?}", err));
-                                }
-                            }
-                        }
-
-                        match func {
-                            AnyFunction::CurriedFunction(func) => {
-                                let mut new_args = func.saved_args.clone();
-                                new_args.extend(args);
-
-                                Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
-                                    CurriedFunction {
-                                        saved_args: new_args,
-                                        function: func.function.clone(),
-                                    },
-                                ))))
-                            }
-
-                            normal => Ok(FruValue::Function(AnyFunction::CurriedFunction(
-                                Rc::new(CurriedFunction {
-                                    saved_args: args,
-                                    function: Rc::new(normal),
-                                }),
-                            ))),
-                        }
-                    }
-
-                    _ => FruError::new_err(format!(
-                        "{} is not a function",
-                        what.evaluate(scope.clone())?.get_type_identifier()
-                    )),
-                }
+                callee.curry_call(arg_count, args)
             }
 
             FruExpression::Binary {
@@ -127,58 +86,25 @@ impl FruExpression {
                 op.operate(left_val, right_val)
             }
 
-            FruExpression::FnDef { args, body } => Ok(FruValue::Function(AnyFunction::Function(
-                Rc::new(FruFunction {
+            FruExpression::Function { args, body } => Ok(FruValue::Function(
+                AnyFunction::Function(Rc::new(FruFunction {
                     argument_idents: args.clone(),
                     body: body.clone(),
                     scope: scope.clone(),
-                }),
-            ))),
+                })),
+            )),
 
             FruExpression::Instantiation { what, args } => {
                 let instantiated = what.evaluate(scope.clone())?;
+                let arg_count = args.len();
+                let args = args_to_lambda!(args, scope);
 
-                match instantiated {
-                    FruValue::StructType(type_) => {
-                        let args = args
-                            .iter()
-                            .map(|arg| arg.evaluate(scope.clone()))
-                            .collect::<Result<Vec<FruValue>, FruError>>()?;
-
-                        if args.len() != type_.fields.len() {
-                            return FruError::new_err(format!(
-                                "expected {} fields, got {}",
-                                type_.fields.len(),
-                                args.len()
-                            ));
-                        }
-
-                        Ok(FruValue::StructObject(FruStructObject {
-                            type_,
-                            fields: args,
-                        }))
-                    }
-
-                    _ => {
-                        return FruError::new_err(format!(
-                            "cannot instantiate {}",
-                            instantiated.get_type_identifier()
-                        ))
-                    }
-                }
+                instantiated.instantiate(arg_count, args)
             }
 
             FruExpression::FieldAccess { what, field } => {
                 let what = what.evaluate(scope.clone())?;
-
-                match what {
-                    FruValue::StructObject(obj) => Ok(obj.get_field(*field)?),
-
-                    _ => FruError::new_err(format!(
-                        "cannot access field of {}",
-                        what.get_type_identifier()
-                    )),
-                }
+                what.get_field(*field)
             }
         }
     }

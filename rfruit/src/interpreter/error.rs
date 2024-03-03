@@ -20,7 +20,7 @@ impl FruError {
     pub fn new(message: String) -> FruError {
         FruError { message }
     }
-    
+
     pub fn news(message: &str) -> FruError {
         FruError {
             message: message.to_string(),

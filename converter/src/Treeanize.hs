@@ -1,8 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
+{-# OPTIONS_GHC -Wno-partial-fields #-}
 
-module Treeanize (toAst, FruExpr (..), FruStmt (..)) where
+module Treeanize (toAst, FruExpr (..), FruStmt (..), FruWatch (..), FruField (..)) where
 
 import qualified Data.List.NonEmpty as NonEmpty
+import Data.Maybe (isJust)
 import Data.Scientific (Scientific)
 import Data.Set (Set, singleton)
 import Data.Void (Void)
@@ -12,6 +14,7 @@ import Text.Megaparsec
   , between
   , choice
   , many
+  , oneOf
   , optional
   , sepBy
   , single
@@ -47,11 +50,26 @@ data FruStmt
   | StBreak
   | StContinue
   | StOperator String String String String String FruStmt -- operator ident * left arg ident * left arg type ident * right arg ident * right arg type ident * body
-  | StType String String [String] -- ("struct") * ident * field idents
+  | StType {getTypeType :: String, getIdent :: String, getFields :: [FruField], getWatches :: [FruWatch]}
   deriving (Show, Eq)
 
 
 -- helpers
+
+data FruField
+  = FruField Bool String (Maybe String)
+  deriving (Show, Eq)
+
+
+data FruWatch
+  = FruWatch [String] FruStmt
+  deriving (Show, Eq)
+
+
+data TypeSection
+  = FieldsSection [FruField]
+  | ConstraintSection [FruWatch]
+
 
 makeErrSet :: String -> Set (ErrorItem FruToken)
 makeErrSet = singleton . Label . NonEmpty.fromList
@@ -61,6 +79,21 @@ makeComposite :: [FruStmt] -> FruStmt
 makeComposite stmts
   | length stmts == 1 = head stmts
   | otherwise = StComposite stmts
+
+
+composeType :: FruToken -> String -> [TypeSection] -> FruStmt
+composeType typeType ident = foldl applySection basicType
+  where
+    basicType = StType (typeTypeToStr typeType) ident [] []
+    typeTypeToStr = \case
+      TkStruct -> "struct"
+      _ -> undefined
+
+    applySection :: FruStmt -> TypeSection -> FruStmt
+    applySection to@(StType _ _ fields watches) = \case
+      FieldsSection fields' -> to{getFields = fields ++ fields'}
+      ConstraintSection watches' -> to{getWatches = watches ++ watches'}
+    applySection _ = undefined
 
 
 -- parser
@@ -99,7 +132,7 @@ toAst = program
         , try breakStmt
         , try continueStmt
         , try operatorDefStmt
-        , try typeDefStmt
+        , try typeStmt
         , try exprStmt
         ]
 
@@ -202,26 +235,51 @@ toAst = program
 
       StOperator ident leftIdent leftType rightIdent rightType <$> blockStmt
 
-    typeDefStmt :: ParserStmt
-    typeDefStmt = do
-      _ <- single TkStruct
+    typeStmt :: ParserStmt
+    typeStmt = do
+      typeType <- oneOf [TkStruct]
 
       ident <- identifier
-
       _ <- single TkBraceOpen
 
-      fields <- many field
+      fields <- fieldsSection
+      sections <- many section
 
       _ <- single TkBraceClose
 
-      return $ StType "struct" ident fields
+      return $ composeType typeType ident (fields : sections)
       where
-        field = do
-          _ <- optional $ single TkPub
-          ident <- identifier
-          _ <- optional $ single TkColon <* identifier
-          _ <- single TkSemiColon
-          return ident
+        fieldsSection = do
+          fields <- many field
+
+          return $ FieldsSection fields
+          where
+            field = do
+              public <- optional (single TkPub)
+              ident <- identifier
+              fieldType <- optional $ single TkColon *> identifier
+              _ <- single TkSemiColon
+              return $ FruField (isJust public) ident fieldType
+
+        section = choice [constraintSection]
+
+        constraintSection = do
+          _ <- single TkConstraints
+
+          watches <- many watch
+
+          return $ ConstraintSection watches
+          where
+            watch = do
+              _ <- single TkWatch
+
+              fields <-
+                between
+                  (single TkParenOpen)
+                  (single TkParenClose)
+                  (sepBy identifier (single TkComma))
+
+              FruWatch fields <$> blockSimpleStmt
 
     expr :: ParserExpr
     expr = do
@@ -253,7 +311,6 @@ toAst = program
 
         literalNumber :: ParserExpr
         literalNumber = ExLiteralNumber <$> token (\case TkNumber x -> Just x; _ -> Nothing) (makeErrSet "number")
-
 
         literalBool :: ParserExpr
         literalBool = do

@@ -1,7 +1,8 @@
 use super::{
-    AnyOperator, FruError, FruExpression, FruStructType, FruValue, Identifier, OperatorIdentifier,
-    Scope,
+    AnyOperator, FruError, FruExpression, FruField, FruStructType, FruValue, Identifier,
+    OperatorIdentifier, Scope,
 };
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -46,7 +47,9 @@ pub enum FruStatement {
     TypeDeclaration {
         type_: TypeType,
         ident: Identifier,
-        fields: Vec<Identifier>,
+        fields: Vec<FruField>,
+        watches_by_field: HashMap<Identifier, Vec<Rc<FruStatement>>>,
+        watches: Vec<Rc<FruStatement>>,
     },
 }
 
@@ -121,33 +124,30 @@ impl FruStatement {
             FruStatement::While {
                 cond: condition,
                 body,
-            } => loop {
-                let result = condition.evaluate(scope.clone())?;
-                match result {
-                    FruValue::Bool(b) => {
-                        if b {
-                            let res = body.execute(scope.clone())?;
-
-                            match res {
-                                StatementSignal::Nah => {}
-                                StatementSignal::Continue => continue,
-                                StatementSignal::Break => return Ok(StatementSignal::Nah),
-                                StatementSignal::Return(v) => {
-                                    return Ok(StatementSignal::Return(v));
-                                }
-                                StatementSignal::BlockReturn(_) => {
-                                    return Err(FruError::news("block return in while loop"));
-                                }
-                            }
-                        } else {
-                            return Ok(StatementSignal::Nah);
-                        }
-                    }
-                    _ => {
+            } => {
+                while {
+                    if let FruValue::Bool(b) = condition.evaluate(scope.clone())? {
+                        b
+                    } else {
                         return Err(FruError::news("condition is not a boolean"));
                     }
+                } {
+                    let res = body.execute(scope.clone())?;
+                    match res {
+                        StatementSignal::Nah => {}
+                        StatementSignal::Continue => continue,
+                        StatementSignal::Break => break,
+                        StatementSignal::Return(v) => {
+                            return Ok(StatementSignal::Return(v));
+                        }
+                        StatementSignal::BlockReturn(_) => {
+                            panic!("unexpected block return in while loop")
+                        }
+                    }
                 }
-            },
+
+                return Ok(StatementSignal::Nah);
+            }
 
             FruStatement::Return { value } => {
                 let v = value.evaluate(scope)?;
@@ -186,13 +186,17 @@ impl FruStatement {
                 type_,
                 ident,
                 fields,
+                watches_by_field,
+                watches,
             } => {
                 scope.let_variable(
                     *ident,
                     match type_ {
                         TypeType::Struct => FruValue::StructType(Rc::new(FruStructType {
-                            name: *ident,
+                            ident: *ident,
                             fields: fields.clone(),
+                            watches_by_field: watches_by_field.clone(),
+                            watches: watches.clone(),
                         })),
                     },
                 )?;

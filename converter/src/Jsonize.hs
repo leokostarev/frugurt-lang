@@ -4,7 +4,7 @@ module Jsonize (toJsonExpr, toJsonStmt, toString, JSON (..)) where
 
 import Data.List (intercalate)
 import Data.Scientific (toRealFloat)
-import Treeanize (FruExpr (..), FruStmt (..))
+import Treeanize (FruExpr (..), FruField (..), FruStmt (..), FruWatch (..))
 
 
 data JSON
@@ -136,13 +136,25 @@ toJsonStmt stmt = case stmt of
       , ("right_type", Str right_type)
       , ("body", toJsonStmt body)
       ]
-  StType t ident fields ->
+  StType t ident fields watches ->
     Object
       [ ("node", Str "type")
       , ("type", Str t)
       , ("ident", Str ident)
-      , ("fields", Array $ map Str fields)
+      , ("fields", Array $ map toJsonField fields)
+      , ("watches", Array $ map toJsonWatch watches)
       ]
+
+
+toJsonWatch :: FruWatch -> JSON
+toJsonWatch (FruWatch flds body) = Object [("fields", Array $ map Str flds), ("body", toJsonStmt body)]
+
+
+toJsonField :: FruField -> JSON
+toJsonField (FruField isPub ident _) =
+  Object 
+    [("is_pub", Bool isPub), ("ident", Str ident)]
+    --  ++ (case typeIdent of Nothing -> []; Just typeIdent -> [("typeIdent", Str typeIdent)]) -- TODO
 
 
 toString :: JSON -> String

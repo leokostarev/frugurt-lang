@@ -40,6 +40,8 @@ data FruToken
   | TkContinue
   | TkStruct
   | TkPub
+  | TkConstraints
+  | TkWatch
   | TkBraceOpen -- punctuation
   | TkBraceClose
   | TkColonBraceOpen
@@ -73,15 +75,16 @@ fruTokenize =
           , TkColonBraceOpen <$ string ":{"
           , TkParenOpen <$ char '('
           , TkParenClose <$ char ')'
-          , TkDollarParenOpen <$ char '$' <* char '('
+          , TkDollarParenOpen <$ string "$("
           , TkBracketOpen <$ char '['
           , TkBracketClose <$ char ']'
           , TkSemiColon <$ char ';'
           , TkColon <$ char ':'
           , TkDot <$ char '.'
           , TkComma <$ char ','
+          , TkConstraints <$ string "-----constraints-----"
           , TkOp <$> operator -- operator
-          , try (TkNumber <$> literalNumber) -- literals
+          , TkNumber <$> try literalNumber -- literals
           , TkBool <$> literalBool
           , TkString <$> literalString
           , keywordOrIdent -- keyword or identifier
@@ -115,4 +118,5 @@ fruTokenize =
           "continue" -> TkContinue
           "struct" -> TkStruct
           "pub" -> TkPub
+          "watch" -> TkWatch
           name -> TkIdent name

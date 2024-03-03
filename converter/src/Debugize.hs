@@ -4,11 +4,36 @@
 module Debugize (toDbgStrStmt) where
 
 import Data.List (intercalate)
-import Treeanize (FruExpr (..), FruStmt (..))
+import Treeanize (FruExpr (..), FruField (..), FruStmt (..), FruWatch (..))
 
 
 getSpace :: Int -> String
 getSpace indent = concat $ replicate indent "|    "
+
+
+toDbgWatch :: Int -> FruWatch -> String
+toDbgWatch indent (FruWatch fields body) =
+  getSpace indent
+    ++ "Watch:\n"
+    ++ getSpace (indent + 1)
+    ++ "fields: "
+    ++ intercalate ", " fields
+    ++ "\n"
+    ++ getSpace (indent + 1)
+    ++ "body:\n"
+    ++ toDbgStrStmt (indent + 2) body
+
+
+toDbgStrField :: Int -> FruField -> String
+toDbgStrField indent (FruField isPub name typeIdent) =
+  getSpace indent
+    ++ (if isPub then "pub " else "")
+    ++ name
+    ++ ( case typeIdent of
+          Nothing -> ""
+          Just ident -> " : " ++ ident
+       )
+    ++ "\n"
 
 
 toDbgStrStmt :: Int -> FruStmt -> String
@@ -103,7 +128,7 @@ toDbgStrStmt indent = \case
       ++ getSpace (indent + 1)
       ++ "body:\n"
       ++ toDbgStrStmt (indent + 2) body
-  StType t ident fields ->
+  StType t ident fields watches ->
     getSpace indent
       ++ "Type:\n"
       ++ getSpace (indent + 1)
@@ -118,9 +143,10 @@ toDbgStrStmt indent = \case
       ++ "\n"
       ++ getSpace (indent + 1)
       ++ "fields:\n"
-      ++ getSpace (indent + 2)
-      ++ intercalate ", " fields
-      ++ "\n"
+      ++ concatMap (toDbgStrField (indent + 2)) fields
+      ++ getSpace (indent + 1)
+      ++ "watches:\n"
+      ++ concatMap (toDbgWatch (indent + 2)) watches
 
 
 toDbgStrExpr :: Int -> FruExpr -> String

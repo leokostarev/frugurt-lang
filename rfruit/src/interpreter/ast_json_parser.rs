@@ -1,5 +1,6 @@
-use super::{FruExpression, FruStatement, FruValue, Identifier, TypeType};
+use super::{FruExpression, FruField, FruStatement, FruValue, Identifier, TypeType};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 pub fn parse(data: Value) -> Box<FruStatement> {
@@ -137,8 +138,29 @@ fn convert(ast: &Value) -> Anything {
                 .as_array()
                 .unwrap()
                 .iter()
-                .map(|x| Identifier::new(x.as_str().unwrap()))
+                .map(convert_fru_field)
                 .collect();
+            let raw_watches: Vec<(Vec<Identifier>, Rc<FruStatement>)> = ast["watches"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(convert_raw_watch)
+                .collect();
+
+            let mut watches_by_field: HashMap<Identifier, Vec<Rc<FruStatement>>> = HashMap::new();
+            let mut watches = Vec::new();
+
+            for (watch_fields, watch_body) in raw_watches {
+                watches.push(watch_body.clone());
+
+                for field in watch_fields {
+                    if let Some(body) = watches_by_field.get_mut(&field) {
+                        body.push(watch_body.clone());
+                    } else {
+                        watches_by_field.insert(field, vec![watch_body.clone()]);
+                    }
+                }
+            }
 
             Stmt(FruStatement::TypeDeclaration {
                 type_: match type_ {
@@ -147,6 +169,8 @@ fn convert(ast: &Value) -> Anything {
                 },
                 ident: Identifier::new(ident),
                 fields,
+                watches_by_field,
+                watches,
             })
         }
 
@@ -231,7 +255,7 @@ fn convert(ast: &Value) -> Anything {
                 .collect();
             let body = convert(&ast["body"]).as_stmt();
 
-            Expr(FruExpression::FnDef {
+            Expr(FruExpression::Function {
                 args,
                 body: Rc::new(body),
             })
@@ -264,4 +288,24 @@ fn convert(ast: &Value) -> Anything {
 
         unknown => panic!("unknown node: {}", unknown),
     }
+}
+
+fn convert_fru_field(ast: &Value) -> FruField {
+    let ident = ast["ident"].as_str().unwrap();
+    let is_public = ast["is_pub"].as_bool().unwrap();
+    FruField {
+        ident: Identifier::new(ident),
+        is_public,
+    }
+}
+
+fn convert_raw_watch(ast: &Value) -> (Vec<Identifier>, Rc<FruStatement>) {
+    let fields = ast["fields"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| Identifier::new(x.as_str().unwrap()))
+        .collect();
+    let body = convert(&ast["body"]).as_stmt();
+    (fields, Rc::new(body))
 }
