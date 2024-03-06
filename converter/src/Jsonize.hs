@@ -95,10 +95,10 @@ toJsonStmt stmt = case stmt of
       , ("ident", Str ident)
       , ("value", toJsonExpr expression)
       ]
-  StSet ident expression ->
+  StSet path expression ->
     Object
       [ ("node", Str "set")
-      , ("ident", Str ident)
+      , ("path", Array $ map Str path)
       , ("value", toJsonExpr expression)
       ]
   StIf cond thenBody elseBody ->

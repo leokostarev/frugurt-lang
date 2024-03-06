@@ -203,11 +203,15 @@ impl FruValue {
             )),
         }
     }
-    
-    pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<FruValue, FruError> {
+
+    pub fn set_field(
+        &mut self,
+        path: &[Identifier],
+        value: FruValue,
+    ) -> Result<FruValue, FruError> {
         match self {
-            FruValue::StructObject(obj) => obj.set_field(ident, value),
-            
+            FruValue::StructObject(obj) => obj.set_field(path, value),
+
             _ => FruError::new_err(format!(
                 "cannot access field of {}",
                 self.get_type_identifier()
@@ -396,15 +400,26 @@ impl FruStructObject {
         }
         FruError::new_err(format!("field {} not found", ident))
     }
-    
-    pub fn set_field(&mut self, ident: Identifier, value: FruValue) -> Result<FruValue, FruError> {
+
+    pub fn set_field(
+        &mut self,
+        path: &[Identifier],
+        value: FruValue,
+    ) -> Result<FruValue, FruError> {
         for (i, field_ident) in self.type_.fields.iter().enumerate() {
-            if field_ident.ident == ident {
-                self.fields[i] = value;
-                return Ok(FruValue::None);
+            if field_ident.ident == path[0] {
+                return if path.len() == 1 {
+                    self.fields[i] = value;
+                    Ok(FruValue::None)
+                } else {
+                    self.fields[i].set_field(&path[1..path.len()], value)
+                };
             }
         }
-        FruError::new_err(format!("field {} does not exist in struct {}", ident, self.type_.ident))
+        FruError::new_err(format!(
+            "field {} does not exist in struct {}",
+            path[0], self.type_.ident
+        ))
     }
 }
 

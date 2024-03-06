@@ -17,6 +17,7 @@ import Text.Megaparsec
   , oneOf
   , optional
   , sepBy
+  , sepBy1
   , single
   , (<|>)
   )
@@ -42,7 +43,7 @@ data FruStmt
   = StComposite [FruStmt]
   | StExpr FruExpr
   | StLet String FruExpr
-  | StSet String FruExpr
+  | StSet [String] FruExpr
   | StIf FruExpr FruStmt FruStmt
   | StWhile FruExpr FruStmt
   | StReturn FruExpr
@@ -175,11 +176,11 @@ toAst = program
 
     setStmt :: ParserStmt
     setStmt = do
-      name <- identifier
+      path <- sepBy1 identifier (single TkDot)
       _ <- single (TkOp "=")
       value <- expr
       _ <- single TkSemiColon
-      return $ StSet name value
+      return $ StSet path value
 
     ifStmt :: ParserStmt
     ifStmt = do
@@ -281,8 +282,11 @@ toAst = program
 
               FruWatch fields <$> blockSimpleStmt
 
-    expr :: ParserExpr
-    expr = do
+    expr = exprConfigurable True
+    notBinaryExpr = exprConfigurable False
+
+    exprConfigurable :: Bool -> ParserExpr
+    exprConfigurable allowBinary = do
       ex <- simpleExpr
       extensions <- many extensionExpr
 
@@ -302,12 +306,13 @@ toAst = program
         extensionExpr :: ParserExtExpr
         extensionExpr =
           choice
-            [ try callExpr
-            , try curryCallExpr
-            , try instantiationExpr
-            , try fieldAccessExpr
-            , try binaryExpr
-            ]
+            ( [ try callExpr
+              , try curryCallExpr
+              , try instantiationExpr
+              , try fieldAccessExpr
+              ]
+                ++ [try binaryExpr | allowBinary]
+            )
 
         literalNumber :: ParserExpr
         literalNumber = ExLiteralNumber <$> token (\case TkNumber x -> Just x; _ -> Nothing) (makeErrSet "number")
@@ -367,7 +372,7 @@ toAst = program
         binaryExpr :: ParserExtExpr
         binaryExpr = do
           op <- token (\case TkOp x -> Just x; _ -> Nothing) (makeErrSet "operator")
-          right <- expr
+          right <- notBinaryExpr
           return $ \left -> ExBinary op left right
 
         instantiationExpr :: ParserExtExpr

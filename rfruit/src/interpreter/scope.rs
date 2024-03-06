@@ -31,10 +31,12 @@ impl Scope {
     }
 
     pub fn get_variable(&self, ident: Identifier) -> Result<FruValue, FruError> {
-        match (self.variables.borrow().get(&ident), &self.parent) {
-            (Some(var), _) => Ok(var.clone()),
-            (_, Some(parent)) => parent.get_variable(ident),
-            _ => FruError::new_err(format!("variable `{:?}` does not exist", ident)),
+        if let Some(var) = self.variables.borrow().get(&ident) {
+            Ok(var.clone())
+        } else if let Some(parent) = &self.parent {
+            parent.get_variable(ident)
+        } else {
+            FruError::new_err(format!("variable `{:?}` does not exist", ident))
         }
     }
 
@@ -50,15 +52,20 @@ impl Scope {
         Ok(())
     }
 
-    pub fn set_variable(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
-        if !self.variables.borrow().contains_key(&ident) {
+    pub fn set_variable(&self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
+        if let Some(v) = self.variables.borrow_mut().get_mut(&path[0]) {
+            if path.len() == 1 {
+                *v = value;
+            } else {
+                v.set_field(&path[1..path.len()], value)?;
+            }
+        } else {
             return Err(FruError::new(format!(
                 "variable {:?} does not exist",
-                ident
+                path[0]
             )));
         }
 
-        self.variables.borrow_mut().insert(ident, value);
         Ok(())
     }
 
@@ -75,7 +82,7 @@ impl Scope {
         }
     }
 
-    pub fn set_operator(&self, ident: OperatorIdentifier, op: AnyOperator) -> () {
+    pub fn set_operator(&self, ident: OperatorIdentifier, op: AnyOperator) {
         self.operators.borrow_mut().insert(ident, op);
     }
 }

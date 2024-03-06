@@ -96,20 +96,11 @@ impl FruStatement {
             }
 
             FruStatement::Set { path, value } => {
-                if path.len() == 1 {
-                    let v = value.evaluate(scope.clone())?;
-                    scope.set_variable(path[0], v)?;
-                    Ok(StatementSignal::Nah)
-                } else {
-                    let v = value.evaluate(scope.clone())?;
-                    let mut to = scope.get_variable(path[0])?;
+                let v = value.evaluate(scope.clone())?;
 
-                    for i in 1..path.len() - 1 {
-                        to = to.get_field(path[i])?
-                    }
-                    to.set_field(path[path.len() - 1], v)?;
-                    Ok(StatementSignal::Nah)
-                }
+                scope.set_variable(path, v)?;
+
+                Ok(StatementSignal::Nah)
             }
 
             FruStatement::If {
@@ -137,10 +128,15 @@ impl FruStatement {
                 body,
             } => {
                 while {
-                    if let FruValue::Bool(b) = condition.evaluate(scope.clone())? {
-                        b
-                    } else {
-                        return Err(FruError::news("condition is not a boolean"));
+                    match condition.evaluate(scope.clone())? {
+                        FruValue::Bool(b) => b,
+                        other => {
+                            return Err(FruError::new(format!(
+                                "unexpected value with type {:?} in while condition: {:?}",
+                                other.get_type_identifier(),
+                                other
+                            )));
+                        }
                     }
                 } {
                     let res = body.execute(scope.clone())?;

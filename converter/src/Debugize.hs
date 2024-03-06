@@ -36,6 +36,18 @@ toDbgStrField indent (FruField isPub name typeIdent) =
     ++ "\n"
 
 
+toDbgStrProperty :: Int -> String -> a -> (Int -> a -> String) -> String
+toDbgStrProperty indent name value toString =
+  getSpace (indent + 1)
+    ++ name
+    ++ ":\n"
+    ++ toString (indent + 2) value
+
+
+toDbgStrStr :: Int -> String -> String
+toDbgStrStr indent str = getSpace indent ++ str ++ "\n"
+
+
 toDbgStrStmt :: Int -> FruStmt -> String
 toDbgStrStmt indent = \case
   StComposite stmts ->
@@ -49,49 +61,27 @@ toDbgStrStmt indent = \case
   StLet ident e ->
     getSpace indent
       ++ "Let:\n"
-      ++ getSpace (indent + 1)
-      ++ "name: "
-      ++ ident
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "what:\n"
-      ++ toDbgStrExpr (indent + 2) e
-  StSet ident e ->
+      ++ toDbgStrProperty indent "ident" ident toDbgStrStr
+      ++ toDbgStrProperty indent "what" e toDbgStrExpr
+  StSet path e ->
     getSpace indent
       ++ "Set:\n"
-      ++ getSpace (indent + 1)
-      ++ "name: "
-      ++ ident
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "what:\n"
-      ++ toDbgStrExpr (indent + 2) e
+      ++ toDbgStrProperty indent "path" (intercalate "." path) toDbgStrStr
+      ++ toDbgStrProperty indent "what" e toDbgStrExpr
   StIf cond thenBody elseBody ->
     getSpace indent
       ++ "If:\n"
-      ++ getSpace (indent + 1)
-      ++ "cond:\n"
-      ++ toDbgStrExpr (indent + 2) cond
-      ++ getSpace (indent + 1)
-      ++ "then:\n"
-      ++ toDbgStrStmt (indent + 2) thenBody
-      ++ getSpace (indent + 1)
-      ++ "else:\n"
-      ++ toDbgStrStmt (indent + 2) elseBody
+      ++ toDbgStrProperty indent "cond" cond toDbgStrExpr
+      ++ toDbgStrProperty indent "then" thenBody toDbgStrStmt
+      ++ toDbgStrProperty indent "else" elseBody toDbgStrStmt
   StWhile cond body ->
     getSpace indent
       ++ "While:\n"
-      ++ getSpace (indent + 1)
-      ++ "cond:\n"
-      ++ toDbgStrExpr (indent + 2) cond
-      ++ getSpace (indent + 1)
-      ++ "body:\n"
-      ++ toDbgStrStmt (indent + 2) body
+      ++ toDbgStrProperty indent "cond" cond toDbgStrExpr
+      ++ toDbgStrProperty indent "body" body toDbgStrStmt
   StReturn e ->
     getSpace indent
       ++ "Return:\n"
-      ++ getSpace indent
-      ++ "what: "
       ++ toDbgStrExpr (indent + 1) e
   StBlockReturn e ->
     getSpace indent
@@ -106,41 +96,15 @@ toDbgStrStmt indent = \case
   StOperator op leftIdent leftType rightIdent rightType body ->
     getSpace indent
       ++ "Operator:\n"
-      ++ getSpace (indent + 1)
-      ++ "op:\n"
-      ++ getSpace (indent + 2)
-      ++ op
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "left:\n"
-      ++ getSpace (indent + 2)
-      ++ leftIdent
-      ++ " : "
-      ++ leftType
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "right:\n"
-      ++ getSpace (indent + 2)
-      ++ rightIdent
-      ++ " : "
-      ++ rightType
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "body:\n"
-      ++ toDbgStrStmt (indent + 2) body
-  StType t ident fields watches ->
+      ++ toDbgStrProperty indent "op" op toDbgStrStr
+      ++ toDbgStrProperty indent "left" (leftIdent ++ " : " ++ leftType) toDbgStrStr
+      ++ toDbgStrProperty indent "right" (rightIdent ++ " : " ++ rightType) toDbgStrStr
+      ++ toDbgStrProperty indent "body" body toDbgStrStmt
+  StType typeType ident fields watches ->
     getSpace indent
       ++ "Type:\n"
-      ++ getSpace (indent + 1)
-      ++ "type:\n"
-      ++ getSpace (indent + 2)
-      ++ t
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "ident:\n"
-      ++ getSpace (indent + 2)
-      ++ ident
-      ++ "\n"
+      ++ toDbgStrProperty indent "type" typeType toDbgStrStr
+      ++ toDbgStrProperty indent "ident" ident toDbgStrStr
       ++ getSpace (indent + 1)
       ++ "fields:\n"
       ++ concatMap (toDbgStrField (indent + 2)) fields
@@ -158,60 +122,37 @@ toDbgStrExpr indent = \case
   ExCall e es ->
     getSpace indent
       ++ "Call:\n"
-      ++ getSpace (indent + 1)
-      ++ "what:\n"
-      ++ toDbgStrExpr (indent + 2) e
+      ++ toDbgStrProperty indent "what" e toDbgStrExpr
       ++ getSpace (indent + 1)
       ++ "args:\n"
       ++ concatMap (toDbgStrExpr (indent + 2)) es
   ExCurryCall e es ->
     getSpace indent
       ++ "CurryCall:\n"
-      ++ getSpace (indent + 1)
-      ++ "what:\n"
-      ++ toDbgStrExpr (indent + 2) e
+      ++ toDbgStrProperty indent "what" e toDbgStrExpr
       ++ getSpace (indent + 1)
       ++ "args:\n"
       ++ concatMap (toDbgStrExpr (indent + 2)) es
   ExBinary op e1 e2 ->
     getSpace indent
       ++ "Binary:\n"
-      ++ getSpace (indent + 1)
-      ++ "op: "
-      ++ op
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "left:\n"
-      ++ toDbgStrExpr (indent + 2) e1
-      ++ getSpace (indent + 1)
-      ++ "right:\n"
-      ++ toDbgStrExpr (indent + 2) e2
+      ++ toDbgStrProperty indent "op" op toDbgStrStr
+      ++ toDbgStrProperty indent "left" e1 toDbgStrExpr
+      ++ toDbgStrProperty indent "right" e2 toDbgStrExpr
   ExFunction args body ->
     getSpace indent
       ++ "Function:\n"
-      ++ getSpace (indent + 1)
-      ++ "args: "
-      ++ intercalate ", " args
-      ++ "\n"
-      ++ getSpace (indent + 1)
-      ++ "body:\n"
-      ++ toDbgStrStmt (indent + 2) body
+      ++ toDbgStrProperty indent "args" (intercalate ", " args) toDbgStrStr
+      ++ toDbgStrProperty indent "body" body toDbgStrStmt
   ExInstantiation e es ->
     getSpace indent
       ++ "Instantiation:\n"
-      ++ getSpace (indent + 1)
-      ++ "what:\n"
-      ++ toDbgStrExpr (indent + 2) e
+      ++ toDbgStrProperty indent "what" e toDbgStrExpr
       ++ getSpace (indent + 1)
       ++ "args:\n"
       ++ concatMap (toDbgStrExpr (indent + 2)) es
   ExFieldAccess e f ->
     getSpace indent
       ++ "FieldAccess:\n"
-      ++ getSpace (indent + 1)
-      ++ "what:\n"
-      ++ toDbgStrExpr (indent + 2) e
-      ++ getSpace (indent + 1)
-      ++ "field: "
-      ++ f
-      ++ "\n"
+      ++ toDbgStrProperty indent "what" e toDbgStrExpr
+      ++ toDbgStrProperty indent "field" f toDbgStrStr

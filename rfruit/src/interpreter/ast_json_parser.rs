@@ -150,12 +150,12 @@ fn convert_to_stmt(ast: &Value) -> FruStatement {
         }
 
         "set" => {
-            let path = ast["ident"]
+            let path = ast["path"]
                 .as_array()
                 .unwrap()
                 .iter()
                 .map(|x| Identifier::new(x.as_str().unwrap()))
-                .collect::<Vec<_>>();
+                .collect();
             let value = convert_to_expr(&ast["value"]);
 
             FruStatement::Set {
