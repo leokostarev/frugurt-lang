@@ -16,7 +16,7 @@ pub enum FruStatement {
         value: Box<FruExpression>,
     },
     Set {
-        ident: Identifier,
+        path: Vec<Identifier>,
         value: Box<FruExpression>,
     },
     If {
@@ -95,10 +95,21 @@ impl FruStatement {
                 Ok(StatementSignal::Nah)
             }
 
-            FruStatement::Set { ident, value } => {
-                let v = value.evaluate(scope.clone())?;
-                scope.set_variable(*ident, v)?;
-                Ok(StatementSignal::Nah)
+            FruStatement::Set { path, value } => {
+                if path.len() == 1 {
+                    let v = value.evaluate(scope.clone())?;
+                    scope.set_variable(path[0], v)?;
+                    Ok(StatementSignal::Nah)
+                } else {
+                    let v = value.evaluate(scope.clone())?;
+                    let mut to = scope.get_variable(path[0])?;
+
+                    for i in 1..path.len() - 1 {
+                        to = to.get_field(path[i])?
+                    }
+                    to.set_field(path[path.len() - 1], v)?;
+                    Ok(StatementSignal::Nah)
+                }
             }
 
             FruStatement::If {

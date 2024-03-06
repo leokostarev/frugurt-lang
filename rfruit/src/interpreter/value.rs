@@ -203,6 +203,17 @@ impl FruValue {
             )),
         }
     }
+    
+    pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<FruValue, FruError> {
+        match self {
+            FruValue::StructObject(obj) => obj.set_field(ident, value),
+            
+            _ => FruError::new_err(format!(
+                "cannot access field of {}",
+                self.get_type_identifier()
+            )),
+        }
+    }
 }
 
 impl ArgCount {
@@ -384,6 +395,16 @@ impl FruStructObject {
             }
         }
         FruError::new_err(format!("field {} not found", ident))
+    }
+    
+    pub fn set_field(&mut self, ident: Identifier, value: FruValue) -> Result<FruValue, FruError> {
+        for (i, field_ident) in self.type_.fields.iter().enumerate() {
+            if field_ident.ident == ident {
+                self.fields[i] = value;
+                return Ok(FruValue::None);
+            }
+        }
+        FruError::new_err(format!("field {} does not exist in struct {}", ident, self.type_.ident))
     }
 }
 
