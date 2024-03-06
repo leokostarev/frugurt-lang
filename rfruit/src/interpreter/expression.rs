@@ -50,7 +50,7 @@ impl FruExpression {
         match self {
             FruExpression::Literal(value) => Ok(value.clone()),
 
-            FruExpression::Variable(ident) => Ok(scope.get_variable(*ident)?),
+            FruExpression::Variable(ident) => scope.get_variable(*ident),
 
             FruExpression::Call { what, args } => {
                 let callee = what.evaluate(scope.clone())?;

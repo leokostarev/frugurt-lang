@@ -88,6 +88,7 @@ pub struct FruStructType {
     pub fields: Vec<FruField>,
     pub watches_by_field: HashMap<Identifier, Vec<Rc<FruStatement>>>,
     pub watches: Vec<Rc<FruStatement>>,
+    pub scope: Rc<Scope>,
     // a lot of expected here :: methods / static functions / etc
 }
 
@@ -204,18 +205,14 @@ impl FruValue {
         }
     }
 
-    pub fn set_field(
-        &mut self,
-        path: &[Identifier],
-        value: FruValue,
-    ) -> Result<FruValue, FruError> {
+    pub fn set_field(&mut self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
         match self {
             FruValue::StructObject(obj) => obj.set_field(path, value),
 
-            _ => FruError::new_err(format!(
+            _ => Err(FruError::new(format!(
                 "cannot access field of {}",
                 self.get_type_identifier()
-            )),
+            ))),
         }
     }
 }
@@ -401,25 +398,46 @@ impl FruStructObject {
         FruError::new_err(format!("field {} not found", ident))
     }
 
-    pub fn set_field(
-        &mut self,
-        path: &[Identifier],
-        value: FruValue,
-    ) -> Result<FruValue, FruError> {
-        for (i, field_ident) in self.type_.fields.iter().enumerate() {
-            if field_ident.ident == path[0] {
-                return if path.len() == 1 {
-                    self.fields[i] = value;
-                    Ok(FruValue::None)
-                } else {
-                    self.fields[i].set_field(&path[1..path.len()], value)
-                };
+    pub fn set_field(&mut self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
+        let pos = self.type_.fields.iter().position(|f| f.ident == path[0]);
+        if pos.is_none() {
+            return Err(FruError::new(format!(
+                "field {} does not exist in struct {}",
+                path[0], self.type_.ident
+            )));
+        }
+        let pos = pos.unwrap();
+
+        if path.len() == 1 {
+            self.fields[pos] = value;
+        } else {
+            self.fields[pos].set_field(&path[1..path.len()], value)?;
+        }
+
+        if let Some(watches) = self
+            .type_
+            .watches_by_field
+            .get(&self.type_.fields[pos].ident)
+        {
+            for w in watches {
+                let scope = Scope::new_with_parent(self.type_.scope.clone());
+
+                let signal = w.execute(scope)?;
+
+                match signal {
+                    StatementSignal::Nah => {}
+                    StatementSignal::Return(FruValue::None) => {}
+                    other => {
+                        return Err(FruError::new(format!(
+                            "unexpected signal in watch {:?}",
+                            other
+                        )))
+                    }
+                }
             }
         }
-        FruError::new_err(format!(
-            "field {} does not exist in struct {}",
-            path[0], self.type_.ident
-        ))
+
+        Ok(())
     }
 }
 

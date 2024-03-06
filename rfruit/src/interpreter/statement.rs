@@ -97,9 +97,7 @@ impl FruStatement {
 
             FruStatement::Set { path, value } => {
                 let v = value.evaluate(scope.clone())?;
-
                 scope.set_variable(path, v)?;
-
                 Ok(StatementSignal::Nah)
             }
 
@@ -204,6 +202,7 @@ impl FruStatement {
                             fields: fields.clone(),
                             watches_by_field: watches_by_field.clone(),
                             watches: watches.clone(),
+                            scope: scope.clone(),
                         })),
                     },
                 )?;
