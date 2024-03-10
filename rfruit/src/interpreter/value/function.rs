@@ -29,7 +29,7 @@ pub struct FruFunction {
 
 #[derive(Clone)]
 pub struct BuiltinFunction {
-    pub function: Rc<TFnBuiltin>,
+    pub function: Rc<TFnBuiltin>, // TODO: check is Rc is needed
     pub argument_count: ArgCount,
 }
 
@@ -132,7 +132,7 @@ impl FruFunction {
             StatementSignal::Nah => Ok(FruValue::None),
             StatementSignal::Return(v) => Ok(v),
             StatementSignal::BlockReturn(v) => Ok(v),
-            other => FruError::new_res(format!("unexpected signal {:?}", other)),
+            other => FruError::new_val(format!("unexpected signal {:?}", other)),
         }
     }
 

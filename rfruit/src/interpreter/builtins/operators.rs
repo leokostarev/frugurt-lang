@@ -143,7 +143,7 @@ builtin_operator!(num_mul_num, Number, Number, Number, *);
 fn num_div_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::Number(l), FruValue::Number(r)) = (left, right) {
         if r == 0.0 {
-            return FruError::new_res_slice("division by zero");
+            return FruError::new_val_slice("division by zero");
         }
         return Ok(FruValue::Number(l / r));
     }
@@ -174,7 +174,7 @@ fn string_plus_string(left: FruValue, right: FruValue) -> Result<FruValue, FruEr
 fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::String(l), FruValue::Number(r)) = (left, right) {
         if r.fract() != 0.0 || r < 0.0 {
-            return FruError::new_res_slice("String * number must be a positive integer");
+            return FruError::new_val_slice("String * number must be a positive integer");
         }
 
         return Ok(FruValue::String(l.repeat(r as usize)));

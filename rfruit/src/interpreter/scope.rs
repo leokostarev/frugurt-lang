@@ -1,5 +1,6 @@
 use crate::{builtins, AnyOperator, FruError, FruValue, Identifier, OperatorIdentifier};
 
+use crate::interpreter::FruObject;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 pub struct Scope {
@@ -12,8 +13,7 @@ enum ScopeAncestor {
     None,
     Parent(Rc<Scope>),
     Object {
-        object_scope: Rc<Scope>,
-        object_ident: Identifier,
+        object: FruObject,
         parent: Rc<Scope>,
     },
 }
@@ -35,19 +35,11 @@ impl Scope {
         })
     }
 
-    pub fn new_with_object_then_parent(
-        object_scope: Rc<Scope>,
-        object_ident: Identifier,
-        parent: Rc<Scope>,
-    ) -> Rc<Scope> {
+    pub fn new_with_object_then_parent(object: FruObject, parent: Rc<Scope>) -> Rc<Scope> {
         Rc::new(Scope {
             variables: RefCell::new(HashMap::new()),
             operators: RefCell::new(HashMap::new()),
-            parent: ScopeAncestor::Object {
-                object_scope,
-                object_ident,
-                parent,
-            },
+            parent: ScopeAncestor::Object { object, parent },
         })
     }
 
@@ -55,30 +47,13 @@ impl Scope {
         if let Some(var) = self.variables.borrow().get(&ident) {
             Ok(var.clone())
         } else {
-            match &self.parent {
-                ScopeAncestor::None => {
-                    FruError::new_res(format!("variable `{:?}` does not exist", ident))
-                }
-                ScopeAncestor::Parent(parent) => parent.get_variable(ident),
-                ScopeAncestor::Object {
-                    object_scope,
-                    object_ident,
-                    parent,
-                } => object_scope
-                    .get_variable(*object_ident)
-                    .expect("should never happen :^)")
-                    .get_field(ident)
-                    .or_else(|_| parent.get_variable(ident)),
-            }
+            self.parent.get_variable(ident)
         }
     }
 
     pub fn let_variable(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if self.variables.borrow().contains_key(&ident) {
-            return Err(FruError::new(format!(
-                "variable {:?} already exists",
-                ident
-            )));
+            return FruError::new_unit(format!("variable {:?} already exists", ident));
         }
 
         self.variables.borrow_mut().insert(ident, value);
@@ -86,22 +61,22 @@ impl Scope {
     }
 
     pub fn set_variable(&self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
-        // TODO: should be able to set variables in parent scope
         assert_ne!(path.len(), 0);
 
-        let mut v = match self.variables.borrow_mut().get_mut(&path[0]) {
-            Some(v) => {
-                if path.len() == 1 {
-                    *v = value;
-                    return Ok(());
-                } else {
-                    v.clone()
-                }
-            }
-            None => return FruError::new_res_err(format!("variable {:?} does not exist", path[0])),
-        };
+        let mut to_set;
 
-        v.set_field(&path[1..path.len()], value)
+        if let Some(v) = self.variables.borrow_mut().get_mut(&path[0]) {
+            if path.len() == 1 {
+                *v = value;
+                return Ok(());
+            } else {
+                to_set = v.clone();
+            }
+        } else {
+            return self.parent.set_variable(path, value);
+        }
+
+        to_set.set_field(&path[1..path.len()], value, false)
     }
 
     pub fn get_operator(&self, ident: OperatorIdentifier) -> Result<AnyOperator, FruError> {
@@ -122,5 +97,31 @@ impl Scope {
 
     pub fn set_operator(&self, ident: OperatorIdentifier, op: AnyOperator) {
         self.operators.borrow_mut().insert(ident, op);
+    }
+}
+
+impl ScopeAncestor {
+    pub fn get_variable(&self, ident: Identifier) -> Result<FruValue, FruError> {
+        match self {
+            ScopeAncestor::None => {
+                FruError::new_val(format!("variable `{:?}` does not exist", ident))
+            }
+            ScopeAncestor::Parent(parent) => parent.get_variable(ident),
+            ScopeAncestor::Object { object, parent } => object
+                .get_field(ident)
+                .or_else(|_| parent.get_variable(ident)),
+        }
+    }
+
+    pub fn set_variable(&self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
+        match self {
+            ScopeAncestor::None => {
+                FruError::new_unit(format!("variable `{:?}` does not exist", path[0]))
+            }
+            ScopeAncestor::Parent(parent) => parent.set_variable(path, value),
+            ScopeAncestor::Object { object, parent } => object
+                .set_field(path, value.clone(), true)
+                .or_else(|_| parent.set_variable(path, value)),
+        }
     }
 }

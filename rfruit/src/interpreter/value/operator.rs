@@ -31,7 +31,7 @@ impl AnyOperator {
                     StatementSignal::Nah => Ok(FruValue::None),
                     StatementSignal::Return(v) => Ok(v),
                     StatementSignal::BlockReturn(v) => Ok(v),
-                    other => FruError::new_res(format!("unexpected signal {:?}", other)),
+                    other => FruError::new_val(format!("unexpected signal {:?}", other)),
                 }
             }
             AnyOperator::BuiltinOperator(op) => op(left_val, right_val),

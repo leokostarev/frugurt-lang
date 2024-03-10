@@ -1,6 +1,6 @@
 use crate::{FruExpression, FruField, FruStatement, FruValue, Identifier, TypeType};
 use serde_json::Value;
-use std::{collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
 pub fn parse(data: Value) -> Box<FruStatement> {
     Box::new(convert_to_stmt(&data))
@@ -224,7 +224,7 @@ fn convert_to_stmt(ast: &Value) -> FruStatement {
         }
 
         "type" => {
-            let type_ = ast["type"].as_str().unwrap();
+            let type_type = ast["type"].as_str().unwrap();
             let ident = ast["ident"].as_str().unwrap();
             let fields = ast["fields"]
                 .as_array()
@@ -232,36 +232,20 @@ fn convert_to_stmt(ast: &Value) -> FruStatement {
                 .iter()
                 .map(convert_to_fru_field)
                 .collect();
-            let raw_watches: Vec<(Vec<Identifier>, Rc<FruStatement>)> = ast["watches"]
+            let watches: Vec<(Vec<Identifier>, Rc<FruStatement>)> = ast["watches"]
                 .as_array()
                 .unwrap()
                 .iter()
                 .map(convert_to_raw_watch)
                 .collect();
 
-            let mut watches_by_field: HashMap<Identifier, Vec<Rc<FruStatement>>> = HashMap::new();
-            let mut watches = Vec::new();
-
-            for (watch_fields, watch_body) in raw_watches {
-                watches.push(watch_body.clone());
-
-                for field in watch_fields {
-                    if let Some(body) = watches_by_field.get_mut(&field) {
-                        body.push(watch_body.clone());
-                    } else {
-                        watches_by_field.insert(field, vec![watch_body.clone()]);
-                    }
-                }
-            }
-
             FruStatement::TypeDeclaration {
-                type_: match type_ {
+                type_type: match type_type {
                     "struct" => TypeType::Struct,
                     other => panic!("only structs are supported now, not {}", other),
                 },
                 ident: Identifier::new(ident),
                 fields,
-                watches_by_field,
                 watches,
             }
         }

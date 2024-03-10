@@ -41,7 +41,7 @@ fn main() {
         }
     }
 
-    let ast = interpreter::ast_json_parser::parse(json_ast);
+    let ast = ast_json_parser::parse(json_ast);
 
-    interpreter::runner::run_program(ast);
+    runner::run_program(ast);
 }

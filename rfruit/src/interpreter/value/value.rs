@@ -42,7 +42,7 @@ impl FruValue {
     ) -> Result<FruValue, FruError> {
         match self {
             FruValue::Function(fun) => fun.call(arg_count, get_args),
-            _ => FruError::new_res(format!("{:?} is not invokable", self.get_type_identifier())),
+            _ => FruError::new_val(format!("{:?} is not invokable", self.get_type_identifier())),
         }
     }
 
@@ -57,7 +57,7 @@ impl FruValue {
                     match err {
                         ArgCountError::TooFewArgs { .. } => {}
                         _ => {
-                            return FruError::new_res(format!("{:?}", err));
+                            return FruError::new_val(format!("{:?}", err));
                         }
                     }
                 }
@@ -84,7 +84,7 @@ impl FruValue {
                 }
             }
 
-            _ => FruError::new_res(format!("{:?} is not invokable", self.get_type_identifier())),
+            _ => FruError::new_val(format!("{:?} is not invokable", self.get_type_identifier())),
         }
     }
 
@@ -96,7 +96,7 @@ impl FruValue {
         match self {
             FruValue::Type(type_) => {
                 if arg_count != type_.fields.len() {
-                    return FruError::new_res(format!(
+                    return FruError::new_val(format!(
                         "expected {} fields, got {}",
                         type_.fields.len(),
                         arg_count
@@ -107,7 +107,7 @@ impl FruValue {
             }
 
             _ => {
-                return FruError::new_res(format!(
+                return FruError::new_val(format!(
                     "cannot instantiate {}",
                     self.get_type_identifier()
                 ))
@@ -119,18 +119,23 @@ impl FruValue {
         match self {
             FruValue::Object(obj) => obj.get_field(ident),
 
-            _ => FruError::new_res(format!(
+            _ => FruError::new_val(format!(
                 "cannot access field of {}",
                 self.get_type_identifier()
             )),
         }
     }
 
-    pub fn set_field(&mut self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
+    pub fn set_field(
+        &mut self,
+        path: &[Identifier],
+        value: FruValue,
+        ignore_watches: bool,
+    ) -> Result<(), FruError> {
         match self {
-            FruValue::Object(obj) => obj.set_field(path, value),
+            FruValue::Object(obj) => obj.set_field(path, value, ignore_watches),
 
-            _ => FruError::new_res_err(format!(
+            _ => FruError::new_unit(format!(
                 "cannot access field of {}",
                 self.get_type_identifier()
             )),

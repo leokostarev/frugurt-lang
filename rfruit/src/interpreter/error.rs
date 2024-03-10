@@ -1,4 +1,4 @@
-use crate::FruValue;
+use crate::{FruValue, StatementSignal};
 
 #[derive(Debug)]
 pub struct FruError {
@@ -10,29 +10,21 @@ impl FruError {
         FruError { message }
     }
 
-    pub fn new_slice(message: &str) -> FruError {
-        FruError {
-            message: message.to_string(),
-        }
-    }
-
-    pub fn new_res(message: String) -> Result<FruValue, FruError> {
+    pub fn new_val(message: String) -> Result<FruValue, FruError> {
         Err(FruError { message })
     }
 
-    pub fn new_res_slice(message: &str) -> Result<FruValue, FruError> {
+    pub fn new_val_slice(message: &str) -> Result<FruValue, FruError> {
         Err(FruError {
             message: message.to_string(),
         })
     }
 
-    pub fn new_res_err(message: String) -> Result<(), FruError> {
+    pub fn new_unit(message: String) -> Result<(), FruError> {
         Err(FruError { message })
     }
 
-    pub fn new_res_err_slice(message: &str) -> Result<(), FruError> {
-        Err(FruError {
-            message: message.to_string(),
-        })
+    pub fn new_signal(message: String) -> Result<StatementSignal, FruError> {
+        Err(FruError { message })
     }
 }

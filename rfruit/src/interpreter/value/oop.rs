@@ -1,4 +1,6 @@
-use crate::{rc_refcell, FruError, FruStatement, FruValue, Identifier, Scope};
+use crate::interpreter::watch::FruWatch;
+use crate::{rc_refcell, FruError, FruValue, Identifier, Scope};
+
 use std::{
     cell::{Ref, RefCell},
     collections::HashMap,
@@ -16,8 +18,8 @@ pub struct FruField {
 pub struct FruType {
     pub ident: Identifier,
     pub fields: Vec<FruField>,
-    pub watches_by_field: HashMap<Identifier, Vec<Rc<FruStatement>>>,
-    pub watches: Vec<Rc<FruStatement>>,
+    pub watches_by_field: RefCell<HashMap<Identifier, Vec<Rc<FruWatch>>>>,
+    pub watches: RefCell<Vec<Rc<FruWatch>>>,
     pub scope: Rc<Scope>,
     // a lot of expected here :: methods / static functions / etc
 }
@@ -51,7 +53,7 @@ impl FruObject {
         self.get().fields[i].clone()
     }
 
-    pub fn set_kth_field(&mut self, i: usize, value: FruValue) {
+    pub fn set_kth_field(&self, i: usize, value: FruValue) {
         self.internal.borrow_mut().fields[i] = value
     }
 
@@ -61,10 +63,15 @@ impl FruObject {
                 return Ok(self.get().fields[i].clone());
             }
         }
-        FruError::new_res(format!("field {} not found", ident))
+        FruError::new_val(format!("field {} not found", ident))
     }
 
-    pub fn set_field(&mut self, path: &[Identifier], value: FruValue) -> Result<(), FruError> {
+    pub fn set_field(
+        &self,
+        path: &[Identifier],
+        value: FruValue,
+        ignore_watches: bool,
+    ) -> Result<(), FruError> {
         assert_ne!(path.len(), 0);
 
         let pos = self
@@ -76,7 +83,7 @@ impl FruObject {
         let pos = match pos {
             Some(p) => p,
             None => {
-                return FruError::new_res_err(format!(
+                return FruError::new_unit(format!(
                     "field {} does not exist in struct {}",
                     path[0],
                     self.get_type().ident
@@ -87,14 +94,29 @@ impl FruObject {
         if path.len() >= 2 {
             return self
                 .get_kth_field(pos)
-                .set_field(&path[1..path.len()], value);
+                .set_field(&path[1..path.len()], value, false);
         }
 
         self.set_kth_field(pos, value);
 
-        self.get_type().watches_by_field.get(&path[0]);
+        if ignore_watches {
+            return Ok(());
+        }
 
-        return Ok(());
+        let w = self
+            .get_type()
+            .watches_by_field
+            .borrow_mut()
+            .get(&path[0])
+            .map_or_else(|| vec![], |w| w.clone());
+
+        for watch in w {
+            let scope =
+                Scope::new_with_object_then_parent(self.clone(), self.get_type().scope.clone());
+            watch.run(scope)?;
+        }
+
+        Ok(())
     }
 }
 

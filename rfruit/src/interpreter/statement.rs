@@ -1,8 +1,10 @@
+use crate::interpreter::watch::FruWatch;
 use crate::{
     AnyOperator, FruError, FruExpression, FruField, FruType, FruValue, Identifier,
     OperatorIdentifier, Scope,
 };
-use std::{collections::HashMap, rc::Rc};
+
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
@@ -44,11 +46,10 @@ pub enum FruStatement {
         body: Rc<FruStatement>,
     },
     TypeDeclaration {
-        type_: TypeType,
+        type_type: TypeType,
         ident: Identifier,
         fields: Vec<FruField>,
-        watches_by_field: HashMap<Identifier, Vec<Rc<FruStatement>>>,
-        watches: Vec<Rc<FruStatement>>,
+        watches: Vec<(Vec<Identifier>, Rc<FruStatement>)>,
     },
 }
 
@@ -113,10 +114,10 @@ impl FruStatement {
                         else_.execute(scope.clone())
                     }
                 } else {
-                    Err(FruError::new(format!(
+                    FruError::new_signal(format!(
                         "{} is not a boolean",
                         result.get_type_identifier()
-                    )))
+                    ))
                 }
             }
 
@@ -128,11 +129,11 @@ impl FruStatement {
                     match condition.evaluate(scope.clone())? {
                         FruValue::Bool(b) => b,
                         other => {
-                            return Err(FruError::new(format!(
+                            return FruError::new_signal(format!(
                                 "unexpected value with type {:?} in while condition: {:?}",
                                 other.get_type_identifier(),
                                 other
-                            )));
+                            ));
                         }
                     }
                 } {
@@ -187,24 +188,44 @@ impl FruStatement {
                 Ok(StatementSignal::Nah)
             }
             FruStatement::TypeDeclaration {
-                type_,
+                type_type, // TODO: use it somehow
                 ident,
                 fields,
-                watches_by_field,
                 watches,
             } => {
-                scope.let_variable(
-                    *ident,
-                    match type_ {
-                        TypeType::Struct => FruValue::Type(Rc::new(FruType {
-                            ident: *ident,
-                            fields: fields.clone(),
-                            watches_by_field: watches_by_field.clone(),
-                            watches: watches.clone(),
-                            scope: scope.clone(),
-                        })),
-                    },
-                )?;
+                let res = Rc::new(FruType {
+                    ident: *ident,
+                    fields: fields.clone(),
+                    watches_by_field: Default::default(),
+                    watches: Default::default(),
+                    scope: scope.clone(),
+                });
+
+                let watches: Vec<(Vec<Identifier>, Rc<FruWatch>)> = watches
+                    .iter()
+                    .map(|(idents, body)| {
+                        (
+                            idents.clone(),
+                            Rc::new(FruWatch {
+                                body: body.clone(),
+                                type_: Rc::downgrade(&res),
+                            }),
+                        )
+                    })
+                    .collect();
+
+                for (idents, watch) in watches {
+                    for ident in idents {
+                        res.watches_by_field
+                            .borrow_mut()
+                            .entry(ident)
+                            .or_insert_with(Vec::new)
+                            .push(watch.clone());
+                        res.watches.borrow_mut().push(watch.clone());
+                    }
+                }
+
+                scope.let_variable(*ident, FruValue::Type(res.clone()))?;
 
                 Ok(StatementSignal::Nah)
             }
