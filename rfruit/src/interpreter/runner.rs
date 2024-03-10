@@ -1,4 +1,4 @@
-use super::{FruStatement, Scope};
+use crate::{FruStatement, Scope};
 use std::time::Instant;
 
 pub fn run_program(program: Box<FruStatement>) {

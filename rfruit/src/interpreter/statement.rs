@@ -1,9 +1,8 @@
-use super::{
-    AnyOperator, FruError, FruExpression, FruField, FruStructType, FruValue, Identifier,
+use crate::{
+    AnyOperator, FruError, FruExpression, FruField, FruType, FruValue, Identifier,
     OperatorIdentifier, Scope,
 };
-use std::collections::HashMap;
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
@@ -197,7 +196,7 @@ impl FruStatement {
                 scope.let_variable(
                     *ident,
                     match type_ {
-                        TypeType::Struct => FruValue::StructType(Rc::new(FruStructType {
+                        TypeType::Struct => FruValue::Type(Rc::new(FruType {
                             ident: *ident,
                             fields: fields.clone(),
                             watches_by_field: watches_by_field.clone(),

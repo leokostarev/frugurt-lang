@@ -1,4 +1,4 @@
-use super::FruValue;
+use crate::FruValue;
 
 #[derive(Debug)]
 pub struct FruError {
@@ -6,24 +6,33 @@ pub struct FruError {
 }
 
 impl FruError {
-    pub fn new_err(message: String) -> Result<FruValue, FruError> {
-        // never Ok!
+    pub fn new(message: String) -> FruError {
+        FruError { message }
+    }
+
+    pub fn new_slice(message: &str) -> FruError {
+        FruError {
+            message: message.to_string(),
+        }
+    }
+
+    pub fn new_res(message: String) -> Result<FruValue, FruError> {
         Err(FruError { message })
     }
 
-    pub fn new_errs(message: &str) -> Result<FruValue, FruError> {
+    pub fn new_res_slice(message: &str) -> Result<FruValue, FruError> {
         Err(FruError {
             message: message.to_string(),
         })
     }
 
-    pub fn new(message: String) -> FruError {
-        FruError { message }
+    pub fn new_res_err(message: String) -> Result<(), FruError> {
+        Err(FruError { message })
     }
 
-    pub fn news(message: &str) -> FruError {
-        FruError {
+    pub fn new_res_err_slice(message: &str) -> Result<(), FruError> {
+        Err(FruError {
             message: message.to_string(),
-        }
+        })
     }
 }

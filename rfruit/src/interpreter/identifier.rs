@@ -1,7 +1,9 @@
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::fmt::{Debug, Display};
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 // this map is used for Identifier visualization
 static mut BACKWARDS_MAP: Lazy<HashMap<u64, String>> = Lazy::new(|| HashMap::new());

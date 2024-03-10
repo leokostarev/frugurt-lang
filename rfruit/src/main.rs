@@ -1,8 +1,10 @@
-use serde_json::Value;
-use std::env;
-use std::process::Command;
-
+mod helpers;
 mod interpreter;
+
+use interpreter::*;
+
+use serde_json::Value;
+use std::{env, process::Command};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -34,7 +36,7 @@ fn main() {
 
     if let Some(x) = json_ast.as_object() {
         if let Some(x) = x.get("error") {
-            eprintln!("Error occured during parsing: {}", x.as_str().unwrap());
+            eprintln!("Error occurred during parsing: {}", x.as_str().unwrap());
             eprintln!("Details: {}", x.get("message").unwrap().as_str().unwrap());
         }
     }

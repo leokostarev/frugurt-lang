@@ -1,7 +1,6 @@
-use super::{FruExpression, FruField, FruStatement, FruValue, Identifier, TypeType};
+use crate::{FruExpression, FruField, FruStatement, FruValue, Identifier, TypeType};
 use serde_json::Value;
-use std::collections::HashMap;
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 pub fn parse(data: Value) -> Box<FruStatement> {
     Box::new(convert_to_stmt(&data))
@@ -44,10 +43,10 @@ fn convert_to_expr(ast: &Value) -> FruExpression {
                 .map(|x| convert_to_expr(x))
                 .collect();
 
-            (FruExpression::Call {
+            FruExpression::Call {
                 what: Box::new(what),
                 args,
-            })
+            }
         }
 
         "curry" => {
@@ -59,10 +58,10 @@ fn convert_to_expr(ast: &Value) -> FruExpression {
                 .map(|x| convert_to_expr(x))
                 .collect();
 
-            (FruExpression::CurryCall {
+            FruExpression::CurryCall {
                 what: Box::new(what),
                 args,
-            })
+            }
         }
 
         "binary" => {
@@ -70,11 +69,11 @@ fn convert_to_expr(ast: &Value) -> FruExpression {
             let left = convert_to_expr(&ast["left"]);
             let right = convert_to_expr(&ast["right"]);
 
-            (FruExpression::Binary {
+            FruExpression::Binary {
                 operator: Identifier::new(operator),
                 left: Box::new(left),
                 right: Box::new(right),
-            })
+            }
         }
 
         "function" => {
@@ -87,10 +86,10 @@ fn convert_to_expr(ast: &Value) -> FruExpression {
                 .collect();
             let body = convert_to_stmt(&ast["body"]);
 
-            (FruExpression::Function {
+            FruExpression::Function {
                 args,
                 body: Rc::new(body),
-            })
+            }
         }
 
         "instantiation" => {
@@ -102,20 +101,20 @@ fn convert_to_expr(ast: &Value) -> FruExpression {
                 .map(|x| convert_to_expr(x))
                 .collect();
 
-            (FruExpression::Instantiation {
+            FruExpression::Instantiation {
                 what: Box::new(what),
                 args,
-            })
+            }
         }
 
         "field_access" => {
             let what = convert_to_expr(&ast["what"]);
             let field = ast["field"].as_str().unwrap();
 
-            (FruExpression::FieldAccess {
+            FruExpression::FieldAccess {
                 what: Box::new(what),
                 field: Identifier::new(field),
-            })
+            }
         }
 
         unknown => panic!("unknown node: {}", unknown),

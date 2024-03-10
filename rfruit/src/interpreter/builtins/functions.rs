@@ -1,6 +1,5 @@
-use super::{AnyFunction, ArgCount, BuiltinFunction, FruError, FruValue, Identifier, TFnBuiltin};
-use std::collections::HashMap;
-use std::rc::Rc;
+use crate::{AnyFunction, ArgCount, BuiltinFunction, FruError, FruValue, Identifier, TFnBuiltin};
+use std::{collections::HashMap, rc::Rc};
 
 pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
     HashMap::from([

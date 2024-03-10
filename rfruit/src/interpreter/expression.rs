@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     AnyFunction, FruError, FruFunction, FruStatement, FruValue, Identifier, OperatorIdentifier,
     Scope,
 };
